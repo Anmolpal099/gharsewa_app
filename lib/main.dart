@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/firebase_config.dart';
 import 'core/config/env_config.dart';
 import 'core/theme/app_theme.dart';
@@ -12,6 +13,12 @@ void main() async {
 
   // Print env config in debug mode
   EnvConfig.printConfig();
+
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  await Hive.openBox('services_cache');
+  await Hive.openBox('bookings_cache');
+  await Hive.openBox('settings');
 
   // Initialize Firebase
   await FirebaseConfig.initialize();
