@@ -9,13 +9,12 @@ class FirebaseConfig {
 
   /// Firebase options built from environment variables
   static FirebaseOptions get currentPlatformOptions => const FirebaseOptions(
-        apiKey: String.fromEnvironment('FIREBASE_API_KEY'),
-        appId: String.fromEnvironment('FIREBASE_APP_ID'),
-        messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
-        projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
-        storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
-        authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
-        databaseURL: String.fromEnvironment('FIREBASE_DATABASE_URL'),
+        apiKey: 'AIzaSyAld-M6F5glVaVYDaCoUQ8OsJLNdmc4BX8',
+        appId: '1:968565700465:web:7d66f1eab7fb98f44e68d0',
+        messagingSenderId: '968565700465',
+        projectId: 'homeservice-bf77e',
+        storageBucket: 'homeservice-bf77e.firebasestorage.app',
+        authDomain: 'homeservice-bf77e.firebaseapp.com',
       );
 
   /// Initialize Firebase with environment-specific configuration
