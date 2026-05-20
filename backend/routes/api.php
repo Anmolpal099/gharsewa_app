@@ -19,8 +19,8 @@ use App\Http\Controllers\API\V1\Admin\BookingManagementController;
 
 Route::prefix('v1')->group(function () {
 
-    // ─── Public Routes ───────────────────────────────────────────
-    Route::prefix('auth')->group(function () {
+    // ─── Public Routes (rate limited to 10/min for auth) ─────────
+    Route::prefix('auth')->middleware('api.limit:10')->group(function () {
         Route::post('login', [AuthController::class, 'login']);
         Route::post('register', [AuthController::class, 'register']);
         Route::post('verify-token', [AuthController::class, 'verifyToken']);
