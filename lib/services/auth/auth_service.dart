@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_state.dart';
+import '../api/api_client.dart';
 
 // ── Stream provider: listens to Firebase auth changes ────────────────────────
 final authServiceProvider = StreamProvider<AuthState>((ref) {
@@ -21,9 +22,13 @@ final authServiceProvider = StreamProvider<AuthState>((ref) {
 });
 
 // ── Actions provider ──────────────────────────────────────────────────────────
-final authActionsProvider = Provider<AuthActions>((ref) => AuthActions());
+final authActionsProvider = Provider<AuthActions>(
+  (ref) => AuthActions(ref.read(apiClientProvider)),
+);
 
 class AuthActions {
+  AuthActions(this._apiClient);
+  final ApiClient _apiClient;
   final _auth = FirebaseAuth.instance;
 
   /// Sign in with email and password
@@ -36,12 +41,31 @@ class AuthActions {
 
   /// Register new user with email and password
   Future<void> register(String email, String password, String name) async {
+    // Step 1: Create Firebase account
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
-    // Update display name
+
+    // Update display name in Firebase
     await credential.user?.updateDisplayName(name);
+
+    // Step 2: Get ID token and send to Laravel to set role claims
+    final idToken = await credential.user?.getIdToken();
+    if (idToken != null) {
+      try {
+        await _apiClient.post('/v1/auth/register', data: {
+          'id_token': idToken,
+          'name': name,
+          'role': 'customer', // default role
+        });
+      } catch (_) {
+        // If Laravel call fails, still proceed — role will default to customer
+      }
+    }
+
+    // Step 5: Force token refresh to get new custom claims from Laravel
+    await credential.user?.getIdToken(true);
   }
 
   /// Sign out
