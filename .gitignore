@@ -71,3 +71,6 @@ GoogleService-Info.plist
 # Coverage
 coverage/
 lcov.info
+
+# Nested duplicate project (not part of main project)
+gharsewa_app/
