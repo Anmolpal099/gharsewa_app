@@ -134,10 +134,6 @@ lib/
 #### Sub-task 2.1.1: Create Laravel project
 **Description:** Initialize new Laravel project with required structure.
 **Estimated Time:** 0.5 hours
-**Commands:**
-```bash
-composer create-project laravel/laravel gharsewa-backend
-cd gharsewa-backend
 ```
 
 
