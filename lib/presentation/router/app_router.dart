@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/route_constants.dart';
 import '../../core/utils/platform_detector.dart';
+import '../../services/auth/auth_service.dart';
+import '../../services/auth/auth_state.dart';
 
 // ── Placeholder screens (will be replaced with real implementations) ──────────
 import '../panels/customer/screens/customer_home_screen.dart';
@@ -12,15 +14,44 @@ import '../shared/screens/login_screen.dart';
 import '../shared/screens/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Listen to auth state changes to refresh router
+  final authState = ref.watch(authServiceProvider);
+
   return GoRouter(
     initialLocation: RouteConstants.splash,
     debugLogDiagnostics: true,
+    refreshListenable: _AuthNotifier(ref),
     redirect: (context, state) {
+      final auth = authState.value;
+      final isLoading = authState.isLoading;
+      final isLoggedIn = auth?.isAuthenticated ?? false;
+      final isAuthRoute = state.matchedLocation == RouteConstants.login ||
+          state.matchedLocation == RouteConstants.splash;
+
+      // Still loading — stay on splash
+      if (isLoading) return null;
+
+      // Not logged in — redirect to login (except auth routes)
+      if (!isLoggedIn && !isAuthRoute) return RouteConstants.login;
+
+      // Logged in — redirect from login/splash to correct panel
+      if (isLoggedIn && isAuthRoute) {
+        switch (auth?.role) {
+          case UserRole.serviceProvider:
+            return RouteConstants.providerDashboard;
+          case UserRole.admin:
+            return RouteConstants.adminDashboard;
+          default:
+            return RouteConstants.customerHome;
+        }
+      }
+
       // Platform guard: Admin panel is web-only
       final isAdminRoute = state.matchedLocation.startsWith('/admin');
       if (isAdminRoute && !PlatformDetector.isWeb) {
-        return RouteConstants.login;
+        return RouteConstants.customerHome;
       }
+
       return null;
     },
     routes: [
@@ -193,5 +224,12 @@ class AdminShell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Notifies go_router to re-evaluate redirects when auth state changes
+class _AuthNotifier extends ChangeNotifier {
+  _AuthNotifier(Ref ref) {
+    ref.listen(authServiceProvider, (_, __) => notifyListeners());
   }
 }
