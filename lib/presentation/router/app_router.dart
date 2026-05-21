@@ -6,8 +6,11 @@ import '../../core/utils/platform_detector.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/auth/auth_state.dart';
 
-// ── Placeholder screens (will be replaced with real implementations) ──────────
 import '../panels/customer/screens/customer_home_screen.dart';
+import '../panels/customer/screens/service_detail_screen.dart';
+import '../panels/customer/screens/booking_screen.dart';
+import '../panels/customer/screens/bookings_list_screen.dart';
+import '../panels/customer/screens/customer_profile_screen.dart';
 import '../panels/provider/screens/provider_dashboard_screen.dart';
 import '../panels/admin/screens/admin_dashboard_screen.dart';
 import '../shared/screens/login_screen.dart';
@@ -77,14 +80,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteConstants.customerBookings,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Customer Bookings')),
-            ),
+            builder: (context, state) => const BookingsListScreen(),
           ),
           GoRoute(
             path: RouteConstants.customerProfile,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Customer Profile')),
+            builder: (context, state) => const CustomerProfileScreen(),
+          ),
+          GoRoute(
+            path: '/customer/services/:id',
+            builder: (context, state) => ServiceDetailScreen(
+              serviceId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: '/customer/booking/:serviceId',
+            builder: (context, state) => BookingScreen(
+              serviceId: state.pathParameters['serviceId']!,
             ),
           ),
         ],
