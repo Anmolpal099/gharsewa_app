@@ -46,5 +46,10 @@ clear:
 
 # Initialize Laravel project (first time setup)
 init:
+	docker-compose build --no-cache
 	docker-compose up -d
-	docker-compose exec app bash setup.sh
+	sleep 10
+	docker-compose exec app php artisan key:generate
+	docker-compose exec app php artisan migrate --force
+	docker-compose exec app php artisan storage:link
+	@echo "✅ Backend ready at http://localhost:8000"

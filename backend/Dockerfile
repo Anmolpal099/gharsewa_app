@@ -22,13 +22,27 @@ RUN pecl install redis && docker-php-ext-enable redis
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy application files
-COPY . .
+# Step 1: Create fresh Laravel project
+RUN composer create-project laravel/laravel . --prefer-dist --no-interaction
 
-# Install PHP dependencies
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Step 2: Install additional packages
+RUN composer require \
+    kreait/laravel-firebase:^5.0 \
+    beyondcode/laravel-websockets:^1.14 \
+    predis/predis:^2.2 \
+    spatie/laravel-permission:^6.0 \
+    stripe/stripe-php:^13.0 \
+    --no-interaction
 
-# Set permissions
+# Step 3: Copy our custom files (overwrite Laravel defaults)
+COPY app/ app/
+COPY database/ database/
+COPY routes/ routes/
+COPY config/ config/
+COPY bootstrap/ bootstrap/
+COPY storage/ storage/
+
+# Step 4: Set permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache

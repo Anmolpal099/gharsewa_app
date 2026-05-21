@@ -12,11 +12,20 @@ services:
     volumes:
       - .:/var/www
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    environment:
+      - APP_ENV=local
+      - APP_KEY=
+      - DB_HOST=db
+      - DB_DATABASE=gharsewa
+      - DB_USERNAME=gharsewa_user
+      - DB_PASSWORD=gharsewa_password
     networks:
       - gharsewa_network
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # Nginx Web Server
   nginx:
