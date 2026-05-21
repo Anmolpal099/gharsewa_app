@@ -1,10 +1,23 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:8000/api',
-  );
+  // Use relative URL for web (avoids CORS in development)
+  // Use absolute URL for mobile
+  static String get baseUrl {
+    if (kIsWeb) {
+      // For web: use same origin or configure CORS on backend
+      return const String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'http://localhost:8000/api',
+      );
+    }
+    return const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'http://10.0.2.2:8000/api', // Android emulator
+    );
+  }
 
   // Auth
   static const String login = '/v1/auth/login';

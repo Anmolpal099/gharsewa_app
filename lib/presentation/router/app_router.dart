@@ -15,6 +15,8 @@ import '../panels/provider/screens/provider_dashboard_screen.dart';
 import '../panels/provider/screens/provider_bookings_screen.dart';
 import '../panels/provider/screens/provider_services_screen.dart';
 import '../panels/admin/screens/admin_dashboard_screen.dart';
+import '../panels/admin/screens/admin_users_screen.dart';
+import '../panels/admin/screens/admin_bookings_screen.dart';
 import '../shared/screens/login_screen.dart';
 import '../shared/screens/splash_screen.dart';
 
@@ -132,15 +134,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteConstants.adminUsers,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Users')),
-            ),
+            builder: (context, state) => const AdminUsersScreen(),
           ),
           GoRoute(
             path: RouteConstants.adminBookings,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Bookings')),
-            ),
+            builder: (context, state) => const AdminBookingsScreen(),
           ),
         ],
       ),
