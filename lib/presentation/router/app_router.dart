@@ -35,6 +35,9 @@ import '../../features/admin_panel/presentation/screens/users_list_screen.dart';
 import '../../features/admin_panel/presentation/screens/user_detail_screen.dart';
 import '../../features/admin_panel/presentation/screens/admin_bookings_screen.dart';
 import '../../features/admin_panel/presentation/screens/reports_screen.dart';
+import '../../features/admin_panel/presentation/screens/admin_profile_screen.dart';
+import '../../features/admin_panel/presentation/screens/admin_settings_screen.dart';
+import '../../features/admin_panel/presentation/screens/admin_management_screen.dart';
 import '../shared/screens/login_screen.dart';
 import '../shared/screens/email_verification_screen.dart';
 import '../shared/screens/splash_screen.dart';
@@ -275,6 +278,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteConstants.adminReports,
             builder: (context, state) => const ReportsScreen(),
+          ),
+          GoRoute(
+            path: RouteConstants.adminProfile,
+            builder: (context, state) => const AdminProfileScreen(),
+          ),
+          GoRoute(
+            path: RouteConstants.adminSettings,
+            builder: (context, state) => const AdminSettingsScreen(),
+          ),
+          GoRoute(
+            path: RouteConstants.adminManagement,
+            builder: (context, state) => const AdminManagementScreen(),
           ),
         ],
       ),

@@ -96,6 +96,8 @@ class AdminSidebar extends StatelessWidget {
         return Icons.calendar_month_outlined;
       case 3:
         return Icons.assessment_outlined;
+      case 4:
+        return Icons.person_outline;
       default:
         return Icons.dashboard_outlined;
     }

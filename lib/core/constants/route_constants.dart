@@ -36,4 +36,7 @@ class RouteConstants {
   static const String adminBookings = '/admin/bookings';
   static const String adminReports = '/admin/reports';
   static const String adminUserDetail = '/admin/users/:id';
+  static const String adminProfile = '/admin/profile';
+  static const String adminSettings = '/admin/settings';
+  static const String adminManagement = '/admin/management';
 }

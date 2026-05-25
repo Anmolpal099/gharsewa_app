@@ -35,12 +35,20 @@ class AdminNavigationController {
       route: RouteConstants.adminReports,
       iconIndex: 3,
     ),
+    AdminNavItem(
+      label: 'Profile',
+      route: RouteConstants.adminProfile,
+      iconIndex: 4,
+    ),
   ];
 
   static int indexForLocation(String location) {
     if (location.startsWith(RouteConstants.adminUsers)) return 1;
     if (location.startsWith(RouteConstants.adminBookings)) return 2;
     if (location.startsWith(RouteConstants.adminReports)) return 3;
+    if (location.startsWith(RouteConstants.adminProfile) ||
+        location.startsWith(RouteConstants.adminSettings) ||
+        location.startsWith(RouteConstants.adminManagement)) return 4;
     return 0;
   }
 
@@ -55,6 +63,15 @@ class AdminNavigationController {
     }
     if (location.startsWith(RouteConstants.adminReports)) {
       return 'Reports';
+    }
+    if (location.startsWith(RouteConstants.adminProfile)) {
+      return 'Admin Profile';
+    }
+    if (location.startsWith(RouteConstants.adminSettings)) {
+      return 'Settings';
+    }
+    if (location.startsWith(RouteConstants.adminManagement)) {
+      return 'Admin Management';
     }
     return 'Admin Dashboard';
   }
