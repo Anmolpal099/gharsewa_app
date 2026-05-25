@@ -16,33 +16,38 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js and npm (for Nodemailer)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Step 1: Create fresh Laravel project
-RUN composer create-project laravel/laravel . --prefer-dist --no-interaction
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
-# Step 2: Install additional packages
-RUN composer require \
-    kreait/laravel-firebase:^5.0 \
-    beyondcode/laravel-websockets:^1.14 \
-    predis/predis:^2.2 \
-    spatie/laravel-permission:^6.0 \
-    stripe/stripe-php:^13.0 \
-    --no-interaction
+# Install PHP dependencies with increased memory limit
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-scripts
 
-# Step 3: Copy our custom files (overwrite Laravel defaults)
-COPY app/ app/
-COPY database/ database/
-COPY routes/ routes/
-COPY config/ config/
-COPY bootstrap/ bootstrap/
-COPY storage/ storage/
+# Copy application files
+COPY . .
 
-# Step 4: Set permissions
+# Create required directories and set permissions
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views \
+    && chmod -R 775 bootstrap/cache storage
+
+# Generate optimized autoload files
+RUN composer dump-autoload --optimize
+
+# Set final permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache

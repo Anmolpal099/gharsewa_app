@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'jwt_tokens.dart';
 
 enum UserRole { customer, serviceProvider, admin }
 
@@ -6,26 +6,26 @@ enum AuthStatus { loading, authenticated, unauthenticated }
 
 class AuthState {
   final AuthStatus status;
-  final User? firebaseUser;
+  final JwtUser? user;
   final UserRole? role;
   final String? errorMessage;
 
   const AuthState({
     required this.status,
-    this.firebaseUser,
+    this.user,
     this.role,
     this.errorMessage,
   });
 
   const AuthState.loading()
       : status = AuthStatus.loading,
-        firebaseUser = null,
+        user = null,
         role = null,
         errorMessage = null;
 
   const AuthState.unauthenticated()
       : status = AuthStatus.unauthenticated,
-        firebaseUser = null,
+        user = null,
         role = null,
         errorMessage = null;
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/route_constants.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../../data/repositories/service_repository.dart';
+import '../widgets/service_card.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,16 @@ class CustomerHomeScreen extends ConsumerWidget {
               ),
             ),
 
+            // ── AI Problem Solver Card ───────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _AIProblemSolverCard(
+                  onTap: () => context.push(RouteConstants.customerAIAssistant),
+                ),
+              ),
+            ),
+
             // ── Category Filter ──────────────────────────────────
             SliverToBoxAdapter(
               child: _CategoryFilter(
@@ -70,8 +81,12 @@ class CustomerHomeScreen extends ConsumerWidget {
             ),
 
             // ── All Services ─────────────────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(title: 'All Services'),
+            SliverToBoxAdapter(
+              child: _SectionHeader(
+                title: 'All Services',
+                actionLabel: 'View all',
+                onAction: () => context.push(RouteConstants.customerServiceList),
+              ),
             ),
 
             servicesAsync.when(
@@ -107,7 +122,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                       mainAxisSpacing: 12,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => _ServiceCard(
+                      (context, index) => ServiceCard(
                         service: filtered[index],
                         onTap: () => context.push(
                           RouteConstants.customerServiceDetail
@@ -131,15 +146,32 @@ class CustomerHomeScreen extends ConsumerWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader({required this.title});
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SectionHeader({
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            if (actionLabel != null && onAction != null)
+              TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ),
       );
 }
 
@@ -258,6 +290,122 @@ class _ServiceCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── AI Problem Solver Card ────────────────────────────────────────────────────
+
+class _AIProblemSolverCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AIProblemSolverCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.cyan.shade400,
+                Colors.blue.shade500,
+                Colors.purple.shade400,
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              // ── Background Decoration ───────────────────────
+              Positioned(
+                top: -20,
+                right: -20,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 120,
+                  color: Colors.white.withOpacity(0.1),
+                ),
+              ),
+              Positioned(
+                bottom: -30,
+                left: -30,
+                child: Icon(
+                  Icons.camera_alt,
+                  size: 100,
+                  color: Colors.white.withOpacity(0.1),
+                ),
+              ),
+
+              // ── Content ─────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'AI Problem Solver',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Need a quick fix? Troubleshoot leaks, sparks, or glitches instantly with AI guidance.',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Text(
+                        'Start DIY Help',
+                        style: TextStyle(
+                          color: Colors.purple,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

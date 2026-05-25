@@ -13,9 +13,10 @@ class ApiConstants {
         defaultValue: 'http://localhost:8000/api',
       );
     }
+    // For desktop (Windows/Mac/Linux) and mobile
     return const String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:8000/api', // Android emulator
+      defaultValue: 'http://localhost:8000/api', // Works for desktop and can be overridden for mobile
     );
   }
 
@@ -25,10 +26,15 @@ class ApiConstants {
   static const String logout = '/v1/auth/logout';
   static const String me = '/v1/auth/me';
 
+  // Public services
+  static const String publicServices = '/v1/services';
+
   // Customer
   static const String customerDashboard = '/v1/customer/dashboard';
   static const String customerServices = '/v1/customer/services';
   static const String customerBookings = '/v1/customer/bookings';
+  static const String customerBookingsCheckAvailability =
+      '/v1/customer/bookings/check-availability';
   static const String customerRecommendations = '/v1/customer/recommendations';
 
   // Provider
@@ -42,4 +48,5 @@ class ApiConstants {
   static const String adminUsers = '/v1/admin/users';
   static const String adminBookings = '/v1/admin/bookings';
   static const String adminReports = '/v1/admin/reports';
+  static const String adminAnalytics = '/v1/admin/analytics';
 }

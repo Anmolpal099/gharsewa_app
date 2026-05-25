@@ -6,6 +6,8 @@ class ProviderProfile {
   final String id;
   final String name;
   final String email;
+  final String? phoneNumber;
+  final int servicesCount;
   final String? photoUrl;
   final String? bio;
   final String location;
@@ -20,6 +22,8 @@ class ProviderProfile {
     required this.id,
     required this.name,
     required this.email,
+    this.phoneNumber,
+    this.servicesCount = 0,
     this.photoUrl,
     this.bio,
     required this.location,
@@ -72,6 +76,8 @@ class ProviderProfile {
       id: json['id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
+      phoneNumber: json['phone_number'] as String?,
+      servicesCount: json['services_count'] as int? ?? 0,
       photoUrl: json['photo_url'] as String?,
       bio: json['bio'] as String?,
       location: json['location'] as String,
@@ -96,6 +102,8 @@ class ProviderProfile {
       'id': id,
       'name': name,
       'email': email,
+      'phone_number': phoneNumber,
+      'services_count': servicesCount,
       'photo_url': photoUrl,
       'bio': bio,
       'location': location,
@@ -113,6 +121,8 @@ class ProviderProfile {
     String? id,
     String? name,
     String? email,
+    String? phoneNumber,
+    int? servicesCount,
     String? photoUrl,
     String? bio,
     String? location,
@@ -127,6 +137,8 @@ class ProviderProfile {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      servicesCount: servicesCount ?? this.servicesCount,
       photoUrl: photoUrl ?? this.photoUrl,
       bio: bio ?? this.bio,
       location: location ?? this.location,

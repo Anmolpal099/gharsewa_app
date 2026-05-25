@@ -25,7 +25,7 @@ class AppTheme {
     navigationBarTheme: NavigationBarThemeData(
       indicatorColor: primaryBlue.withOpacity(0.2),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
@@ -54,7 +54,7 @@ class AppTheme {
     navigationBarTheme: NavigationBarThemeData(
       indicatorColor: primaryGreen.withOpacity(0.2),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
@@ -84,7 +84,7 @@ class AppTheme {
       selectedIconTheme: const IconThemeData(color: primaryOrange),
       indicatorColor: primaryOrange.withOpacity(0.2),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),

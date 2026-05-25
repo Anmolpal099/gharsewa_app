@@ -2,7 +2,8 @@ import '../../services/auth/auth_state.dart';
 
 class UserModel {
   final String id;
-  final String firebaseUid;
+  /// Legacy Firebase UID or JWT subject — use [externalId].
+  final String externalId;
   final String email;
   final String name;
   final UserRole role;
@@ -14,7 +15,7 @@ class UserModel {
 
   const UserModel({
     required this.id,
-    required this.firebaseUid,
+    required this.externalId,
     required this.email,
     required this.name,
     required this.role,
@@ -27,7 +28,9 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
         id: json['id'] as String,
-        firebaseUid: json['firebase_uid'] as String,
+        externalId: json['external_id'] as String? ??
+            json['firebase_uid'] as String? ??
+            json['id'] as String,
         email: json['email'] as String,
         name: json['name'] as String,
         role: AuthState.roleFromString(json['role'] as String?),
@@ -42,7 +45,7 @@ class UserModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'firebase_uid': firebaseUid,
+        'external_id': externalId,
         'email': email,
         'name': name,
         'role': role.name,

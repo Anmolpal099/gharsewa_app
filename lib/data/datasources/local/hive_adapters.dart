@@ -26,7 +26,7 @@ class UserModelAdapter extends TypeAdapter<UserModel> {
   UserModel read(BinaryReader reader) {
     return UserModel(
       id: reader.readString(),
-      firebaseUid: reader.readString(),
+      externalId: reader.readString(),
       email: reader.readString(),
       name: reader.readString(),
       role: UserRole.values[reader.readInt()],
@@ -43,7 +43,7 @@ class UserModelAdapter extends TypeAdapter<UserModel> {
   @override
   void write(BinaryWriter writer, UserModel obj) {
     writer.writeString(obj.id);
-    writer.writeString(obj.firebaseUid);
+    writer.writeString(obj.externalId);
     writer.writeString(obj.email);
     writer.writeString(obj.name);
     writer.writeInt(obj.role.index);

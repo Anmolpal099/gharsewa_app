@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
-
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/utils/json_helpers.dart';
 import '../../../../services/api/api_client.dart';
 import '../models/models.dart';
 
@@ -19,7 +18,7 @@ class ProviderApiService {
   Future<ProviderProfile> getProviderProfile() async {
     final response = await _apiClient.get('/v1/provider/profile');
     if (response.data['success'] == true) {
-      return _profileFromApi(response.data['data'] as Map<String, dynamic>);
+      return _profileFromApi(requireJsonMap(response.data['data'], field: 'data'));
     }
     throw Exception(response.data['message'] ?? 'Failed to fetch provider profile');
   }
@@ -27,7 +26,7 @@ class ProviderApiService {
   Future<ProviderProfile> updateProviderProfile(Map<String, dynamic> data) async {
     final response = await _apiClient.put('/v1/provider/profile', data: data);
     if (response.data['success'] == true) {
-      return _profileFromApi(response.data['data'] as Map<String, dynamic>);
+      return _profileFromApi(requireJsonMap(response.data['data'], field: 'data'));
     }
     throw Exception(response.data['message'] ?? 'Failed to update provider profile');
   }
@@ -89,6 +88,24 @@ class ProviderApiService {
     }
   }
 
+  Future<void> sendCounterOffer(
+    String requestId, {
+    required double counterPrice,
+    String? message,
+  }) async {
+    final response = await _apiClient.post(
+      '/v1/provider/bookings/$requestId/counter',
+      data: {
+        'counter_price': counterPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+
+    if (response.data['success'] != true) {
+      throw Exception(response.data['message'] ?? 'Failed to send counter-offer');
+    }
+  }
+
   Future<void> declineRequest(String requestId, String reason) async {
     final response = await _apiClient.post(
       '/v1/provider/bookings/$requestId/reject',
@@ -103,77 +120,53 @@ class ProviderApiService {
     return Future.value(_metricsFromDashboard(dashboard));
   }
 
-  /// Local AI SOP generator (no backend endpoint yet).
+  /// POST /api/v1/ai/safety-sop
   Future<SafetySOP> generateSafetySOP(String jobType) async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    const uuid = Uuid();
-    final content = '''
-# Safety SOP: $jobType
-
-## Hazards
-- Slip/trip hazards in work area
-- Electrical exposure (if applicable)
-- Chemical or dust exposure
-
-## Required PPE
-- Safety gloves
-- Safety goggles
-- Closed-toe footwear
-
-## Procedures
-1. Inspect work area before starting
-2. Confirm tools and equipment are in safe condition
-3. Follow manufacturer instructions for all products
-4. Keep walkways clear during service
-
-## Emergency Protocols
-- Stop work immediately if unsafe conditions appear
-- Call local emergency services (100/101/102) for serious injury
-- Notify the customer and platform support
-''';
-
-    return SafetySOP(
-      id: uuid.v4(),
-      jobType: jobType.trim(),
-      content: content,
-      hazards: const [
-        'Slip/trip hazards',
-        'Electrical exposure',
-        'Chemical or dust exposure',
-      ],
-      requiredPPE: const ['Safety gloves', 'Safety goggles', 'Closed-toe footwear'],
-      procedures: const [
-        'Inspect work area before starting',
-        'Confirm tools are safe',
-        'Follow manufacturer instructions',
-        'Keep walkways clear',
-      ],
-      emergencyProtocols: const [
-        'Stop work if unsafe',
-        'Call emergency services for injury',
-        'Notify customer and support',
-      ],
-      generatedAt: DateTime.now(),
-      isSaved: false,
+    final response = await _apiClient.post(
+      '/v1/ai/safety-sop',
+      data: {'job_type': jobType.trim()},
     );
+
+    if (response.data['success'] == true) {
+      return SafetySOP.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    }
+    throw Exception(response.data['message'] ?? 'Failed to generate safety SOP');
+  }
+
+  /// GET /api/v1/provider/metrics
+  Future<PerformanceMetrics> getProviderMetricsFromApi() async {
+    final response = await _apiClient.get('/v1/provider/metrics');
+    if (response.data['success'] == true) {
+      return PerformanceMetrics.fromJson(
+        requireJsonMap(response.data['data'], field: 'data'),
+      );
+    }
+    throw Exception(response.data['message'] ?? 'Failed to fetch metrics');
   }
 
   ProviderProfile _profileFromApi(Map<String, dynamic> json) {
-    final metadata = json['metadata'] as Map<String, dynamic>? ?? {};
+    final metadata = asJsonMap(json['metadata']);
     final skills = (metadata['skills'] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
         <String>[];
-    final certsJson = metadata['certifications'] as List<dynamic>? ?? [];
-    final certifications = certsJson
-        .map((e) => Certification.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final certsJson = metadata['certifications'];
+    final certifications = certsJson is List<dynamic>
+        ? certsJson
+            .whereType<Map>()
+            .map((e) => Certification.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        : <Certification>[];
 
     final now = DateTime.now();
     return ProviderProfile(
       id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? 'Provider',
       email: json['email'] as String? ?? '',
+      phoneNumber: json['phone_number'] as String?,
+      servicesCount: json['services_count'] as int? ?? 0,
       photoUrl: json['profile_image_url'] as String?,
       bio: metadata['business_description'] as String? ??
           metadata['bio'] as String?,
@@ -233,6 +226,17 @@ class ProviderApiService {
         ? DateTime.parse(json['created_at'] as String)
         : DateTime.now();
 
+    final metadata = json['metadata'] as Map<String, dynamic>?;
+    final hasCounter = metadata?['counter_offer'] != null;
+    final status = _mapBookingStatus(json['status'] as String?, hasCounter);
+
+    var proposedPrice = (json['total_price'] as num?)?.toDouble() ?? 0;
+    if (hasCounter) {
+      final offer = metadata!['counter_offer'] as Map<String, dynamic>;
+      proposedPrice =
+          (offer['counter_price'] as num?)?.toDouble() ?? proposedPrice;
+    }
+
     return BookingRequest(
       id: json['id'] as String,
       customerId: json['customer_id'] as String? ?? '',
@@ -241,11 +245,25 @@ class ProviderApiService {
       customerLocation: customer?['metadata']?['address'] as String? ?? 'Nearby',
       serviceTitle: service?['title'] as String? ?? 'Service request',
       description: service?['description'] as String? ?? '',
-      proposedPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
+      proposedPrice: proposedPrice,
       scheduledDateTime: scheduled,
       createdAt: created,
-      status: BookingRequestStatus.pending,
+      status: status,
     );
+  }
+
+  BookingRequestStatus _mapBookingStatus(String? status, bool hasCounter) {
+    if (hasCounter) return BookingRequestStatus.counterOffered;
+    switch (status) {
+      case 'confirmed':
+        return BookingRequestStatus.accepted;
+      case 'rejected':
+      case 'cancelled':
+        return BookingRequestStatus.declined;
+      case 'pending':
+      default:
+        return BookingRequestStatus.pending;
+    }
   }
 
   PerformanceMetrics _metricsFromDashboard(Map<String, dynamic> dashboard) {

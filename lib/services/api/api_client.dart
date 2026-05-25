@@ -24,6 +24,9 @@ class ApiClient {
     ]);
   }
 
+  /// Authenticated Dio instance (for multipart uploads).
+  Dio get dio => _dio;
+
   /// GET request with automatic error handling
   Future<Response> get(String path, {Map<String, dynamic>? params}) async {
     try {

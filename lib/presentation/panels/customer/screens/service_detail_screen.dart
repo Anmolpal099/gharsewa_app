@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/route_constants.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../../data/repositories/service_repository.dart';
+import '../widgets/service_image_gallery.dart';
 
 final serviceDetailProvider =
     FutureProvider.family<ServiceModel, String>((ref, id) async {
@@ -24,19 +25,15 @@ class ServiceDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (service) => CustomScrollView(
           slivers: [
-            SliverAppBar(
-              expandedHeight: 250,
-              pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(service.name),
-                background: Container(
-                  color: Colors.blue.shade100,
-                  child: const Center(
-                    child: Icon(Icons.home_repair_service,
-                        size: 80, color: Colors.blue),
-                  ),
-                ),
+            SliverToBoxAdapter(
+              child: ServiceImageGallery(
+                imageUrls: service.imageUrls,
+                fallbackTitle: service.name,
               ),
+            ),
+            SliverAppBar(
+              pinned: true,
+              title: Text(service.name),
             ),
             SliverToBoxAdapter(
               child: Padding(

@@ -20,6 +20,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isRegisterMode = false;
   final _nameCtrl = TextEditingController();
+  bool _isNavigatingToOtp = false; // Flag to prevent auto-navigation during OTP flow
+  String _selectedRole = 'customer'; // Default role
 
   @override
   void dispose() {
@@ -59,26 +61,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final actions = ref.read(authActionsProvider);
 
       if (_isRegisterMode) {
+        // Set flag to prevent auto-navigation
+        setState(() => _isNavigatingToOtp = true);
+        
         await actions.register(
           _emailCtrl.text,
           _passwordCtrl.text,
           _nameCtrl.text,
+          role: _selectedRole, // Pass selected role
         );
+        
+        // After registration, navigate to OTP verification screen
+        if (mounted) {
+          context.push(
+            '/otp-input?type=email_verification',
+            extra: _emailCtrl.text,
+          );
+        }
       } else {
         await actions.signIn(_emailCtrl.text, _passwordCtrl.text);
+        
+        // Let the router handle navigation based on auth state
+        // Go to splash which will trigger redirect to correct dashboard
+        if (mounted) {
+          context.go('/splash');
+        }
       }
-
-      // Navigate based on role after auth state updates
+    } catch (e) {
       if (mounted) {
-        final authState = ref.read(authServiceProvider).value;
-        _navigateByRole(authState?.role);
-      }
-    } on Exception catch (e) {
-      if (mounted) {
+        setState(() => _isNavigatingToOtp = false); // Reset flag on error
+        
+        // Extract error message
+        String errorMessage = 'Something went wrong. Please try again.';
+        if (e.toString().contains('Exception:')) {
+          errorMessage = e.toString().replaceAll('Exception: ', '');
+        } else {
+          errorMessage = e.toString();
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_parseError(e.toString())),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -110,9 +135,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     // Listen to auth state — auto-navigate if already logged in
+    // BUT NOT during registration (we handle OTP flow manually)
     ref.listen(authServiceProvider, (_, next) {
       next.whenData((auth) {
-        if (auth.isAuthenticated) _navigateByRole(auth.role);
+        // Only auto-navigate if authenticated AND not in registration mode AND not navigating to OTP
+        if (auth.isAuthenticated && !_isRegisterMode && !_isLoading && !_isNavigatingToOtp) {
+          _navigateByRole(auth.role);
+        }
       });
     });
 
@@ -167,6 +196,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      
+                      // ── Role Selector ─────────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(
+                              'Register as',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            RadioListTile<String>(
+                              title: const Text('Customer'),
+                              subtitle: const Text('Book services from providers'),
+                              value: 'customer',
+                              groupValue: _selectedRole,
+                              onChanged: (value) {
+                                setState(() => _selectedRole = value!);
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            RadioListTile<String>(
+                              title: const Text('Service Provider'),
+                              subtitle: const Text('Offer services to customers'),
+                              value: 'serviceProvider', // Changed from 'service_provider' to match backend
+                              groupValue: _selectedRole,
+                              onChanged: (value) {
+                                setState(() => _selectedRole = value!);
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                     ],
 
                     // ── Email ─────────────────────────────────────
@@ -203,6 +275,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
+                    
+                    // ── Forgot Password Link (login only) ────────
+                    if (!_isRegisterMode)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => context.push('/forgot-password'),
+                          child: const Text('Forgot Password?'),
+                        ),
+                      ),
+                    
                     const SizedBox(height: 24),
 
                     // ── Submit button ─────────────────────────────

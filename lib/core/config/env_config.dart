@@ -66,7 +66,7 @@ class EnvConfig {
   // Firebase Authentication Settings
   static const bool firebaseAuthEnabled = bool.fromEnvironment(
     'FIREBASE_AUTH_ENABLED',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   static const int firebaseTokenRefreshInterval = int.fromEnvironment(

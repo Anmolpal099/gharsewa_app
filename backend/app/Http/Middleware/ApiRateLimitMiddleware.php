@@ -3,37 +3,46 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class ApiRateLimitMiddleware
 {
-    public function __construct(private RateLimiter $limiter) {}
-
+    /**
+     * Handle an incoming request.
+     */
     public function handle(Request $request, Closure $next, int $maxAttempts = 100): Response
     {
-        // Key: user UID or IP address
-        $key = $request->get('firebase_uid', $request->ip());
+        $key = $this->resolveRequestSignature($request);
 
-        if ($this->limiter->tooManyAttempts($key, $maxAttempts)) {
-            $retryAfter = $this->limiter->availableIn($key);
-
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
             return response()->json([
-                'success' => false,
-                'message' => 'Too many requests. Please try again later.',
-                'code'    => 'RATE_LIMIT_EXCEEDED',
-                'retry_after' => $retryAfter,
-            ], 429)->header('Retry-After', $retryAfter);
+                'error' => 'Too Many Requests',
+                'message' => 'Rate limit exceeded. Please try again later.',
+                'retry_after' => RateLimiter::availableIn($key)
+            ], 429);
         }
 
-        $this->limiter->hit($key, 60); // 60 second window
+        RateLimiter::hit($key, 60); // 60 seconds window
 
         $response = $next($request);
 
-        $response->headers->set('X-RateLimit-Limit', $maxAttempts);
-        $response->headers->set('X-RateLimit-Remaining', $this->limiter->remaining($key, $maxAttempts));
+        return $response->withHeaders([
+            'X-RateLimit-Limit' => $maxAttempts,
+            'X-RateLimit-Remaining' => RateLimiter::remaining($key, $maxAttempts),
+        ]);
+    }
 
-        return $response;
+    /**
+     * Resolve request signature.
+     */
+    protected function resolveRequestSignature(Request $request): string
+    {
+        $user = $request->input('firebase_uid');
+        
+        return $user 
+            ? sha1('api|' . $user)
+            : sha1('api|' . $request->ip());
     }
 }

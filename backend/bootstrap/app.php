@@ -3,10 +3,11 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\FirebaseAuthMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\ApiRateLimitMiddleware;
+use App\Http\Middleware\LoginRateLimitMiddleware;
+use App\Http\Middleware\JwtMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,9 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // ── Route-level middleware aliases ─────────────────────────
         $middleware->alias([
-            'firebase.auth' => FirebaseAuthMiddleware::class,
+            'jwt.auth'      => JwtMiddleware::class,
             'role'          => RoleMiddleware::class,
             'api.limit'     => ApiRateLimitMiddleware::class,
+            'login.limit'   => LoginRateLimitMiddleware::class,
         ]);
 
         // ── API middleware group ───────────────────────────────────

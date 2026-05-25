@@ -10,7 +10,12 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     volumes:
+      # Mount entire project for development (allows live code changes)
       - .:/var/www
+      # Override vendor directory to use container's version
+      - /var/www/vendor
+      # Override node_modules if you have any
+      - /var/www/node_modules
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
     environment:
       - APP_ENV=local
@@ -36,7 +41,7 @@ services:
       - "8000:80"
       - "443:443"
     volumes:
-      - .:/var/www
+      - ./public:/var/www/public:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
     networks:
       - gharsewa_network
@@ -91,11 +96,13 @@ services:
     container_name: gharsewa_websocket
     restart: unless-stopped
     working_dir: /var/www
-    command: php artisan websockets:serve
+    command: php artisan reverb:start
     ports:
       - "6001:6001"
     volumes:
       - .:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
     networks:
       - gharsewa_network
     depends_on:
@@ -113,6 +120,8 @@ services:
     command: php artisan queue:work --sleep=3 --tries=3
     volumes:
       - .:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
     networks:
       - gharsewa_network
     depends_on:
@@ -130,6 +139,8 @@ services:
     command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
     volumes:
       - .:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
     networks:
       - gharsewa_network
     depends_on:

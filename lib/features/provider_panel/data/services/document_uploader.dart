@@ -98,10 +98,14 @@ class DocumentUploader {
           final data = response.data as Map<String, dynamic>;
           
           // Try common response structures
-          final fileUrl = data['url'] ?? 
-                         data['file_url'] ?? 
-                         data['data']?['url'] ?? 
-                         data['data']?['file_url'];
+          final nested = data['data'];
+          final fileUrl = data['url'] ??
+              data['file_url'] ??
+              data['image_url'] ??
+              (nested is Map ? nested['url'] : null) ??
+              (nested is Map ? nested['file_url'] : null) ??
+              (nested is Map ? nested['image_url'] : null) ??
+              (nested is Map ? nested['document_url'] : null);
           
           if (fileUrl != null && fileUrl is String) {
             return fileUrl;

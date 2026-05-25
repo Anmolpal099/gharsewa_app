@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../data/models/booking_model.dart';
 import '../../../../data/repositories/booking_repository.dart';
 
@@ -103,43 +104,56 @@ class _BookingCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Booking #${booking.id.substring(0, 8)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _statusColor()),
+      child: InkWell(
+        onTap: () => context.push('/customer/bookings/${booking.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Booking #${booking.id.substring(0, 8)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor().withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _statusColor()),
+                    ),
+                    child: Text(booking.status.name,
+                        style: TextStyle(color: _statusColor(), fontSize: 12)),
                   ),
-                  child: Text(booking.status.name,
-                      style: TextStyle(color: _statusColor(), fontSize: 12)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text('Scheduled: ${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} at ${booking.scheduledAt.hour}:${booking.scheduledAt.minute.toString().padLeft(2, '0')}'),
-            Text('Total: ${booking.currency} ${booking.totalPrice.toStringAsFixed(0)}'),
-            if (booking.isPending) ...[
+                ],
+              ),
               const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () async {
-                  await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
-                  ref.invalidate(customerBookingsProvider);
-                },
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Cancel Booking'),
+              Text('Scheduled: ${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} at ${booking.scheduledAt.hour}:${booking.scheduledAt.minute.toString().padLeft(2, '0')}'),
+              Text('Total: ${booking.currency} ${booking.totalPrice.toStringAsFixed(0)}'),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => context.push('/customer/bookings/${booking.id}'),
+                    icon: const Icon(Icons.visibility, size: 16),
+                    label: const Text('View Details'),
+                  ),
+                  if (booking.isPending)
+                    TextButton.icon(
+                      onPressed: () async {
+                        await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
+                        ref.invalidate(customerBookingsProvider);
+                      },
+                      icon: const Icon(Icons.cancel, size: 16),
+                      label: const Text('Cancel'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    ),
+                ],
               ),
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/constants/route_constants.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../data/repositories/booking_repository.dart';
 import '../../../../data/repositories/service_repository.dart';
 
@@ -15,7 +17,9 @@ class BookingScreen extends ConsumerStatefulWidget {
 
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
+  String? _selectedSlot;
+  List<String> _slots = [];
+  bool _loadingSlots = false;
   bool _isLoading = false;
 
   Future<void> _pickDate() async {
@@ -25,52 +29,80 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       firstDate: DateTime.now().add(const Duration(days: 1)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    if (date != null) setState(() => _selectedDate = date);
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 9, minute: 0),
-    );
-    if (time != null) setState(() => _selectedTime = time);
+    if (date == null) return;
+    setState(() {
+      _selectedDate = date;
+      _selectedSlot = null;
+      _loadingSlots = true;
+    });
+    final slots = await ref.read(bookingRepositoryProvider).checkAvailability(
+          serviceId: widget.serviceId,
+          date: date,
+        );
+    if (mounted) {
+      setState(() {
+        _slots = slots;
+        _loadingSlots = false;
+      });
+    }
   }
 
   Future<void> _confirmBooking() async {
-    if (_selectedDate == null || _selectedTime == null) {
+    final strings = ref.read(appStringsProvider);
+    if (_selectedDate == null || _selectedSlot == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select date and time')),
+        SnackBar(content: Text(strings.selectTimeSlot)),
       );
       return;
     }
 
+    final parts = _selectedSlot!.split(':');
+    final scheduledAt = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+    );
+
+    final service = await ref
+        .read(serviceRepositoryProvider)
+        .getServiceById(widget.serviceId);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.confirmBooking),
+        content: Text(
+          'Book "${service.name}" on ${_selectedDate!.toLocal().toString().split(' ').first} at $_selectedSlot for ${service.currency} ${service.price.toStringAsFixed(0)}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(strings.confirmBooking),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
     setState(() => _isLoading = true);
-
     try {
-      final scheduledAt = DateTime(
-        _selectedDate!.year,
-        _selectedDate!.month,
-        _selectedDate!.day,
-        _selectedTime!.hour,
-        _selectedTime!.minute,
-      );
-
-      // Get service details for price
-      final service = await ref
-          .read(serviceRepositoryProvider)
-          .getServiceById(widget.serviceId);
-
       await ref.read(bookingRepositoryProvider).createBooking({
         'service_id': widget.serviceId,
         'scheduled_at': scheduledAt.toIso8601String(),
         'total_price': service.price,
         'currency': service.currency,
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Booking created successfully!'),
+          SnackBar(
+            content: Text(strings.bookingConfirmed),
             backgroundColor: Colors.green,
           ),
         );
@@ -89,14 +121,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Service')),
+      appBar: AppBar(title: Text(strings.confirmBooking)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Date picker
             Card(
               child: ListTile(
                 leading: const Icon(Icons.calendar_today, color: Colors.blue),
@@ -109,22 +142,29 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Time picker
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.access_time, color: Colors.blue),
-                title: const Text('Select Time'),
-                subtitle: Text(_selectedTime == null
-                    ? 'Tap to choose a time'
-                    : _selectedTime!.format(context)),
-                onTap: _pickTime,
-                trailing: const Icon(Icons.chevron_right),
-              ),
-            ),
+            if (_loadingSlots)
+              const Center(child: CircularProgressIndicator())
+            else if (_selectedDate != null) ...[
+              Text(strings.selectTimeSlot,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (_slots.isEmpty)
+                Text(strings.noSlots)
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _slots.map((slot) {
+                    final selected = _selectedSlot == slot;
+                    return ChoiceChip(
+                      label: Text(slot),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _selectedSlot = slot),
+                    );
+                  }).toList(),
+                ),
+            ],
             const Spacer(),
-
-            // Confirm button
             FilledButton(
               onPressed: _isLoading ? null : _confirmBooking,
               style: FilledButton.styleFrom(
@@ -135,9 +175,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('Confirm Booking', style: TextStyle(fontSize: 16)),
+                  : Text(strings.confirmBooking, style: const TextStyle(fontSize: 16)),
             ),
           ],
         ),

@@ -66,4 +66,24 @@ class BookingRepository {
       await _api.post('${ApiConstants.providerBookings}/$id/complete');
     } catch (_) {}
   }
+
+  /// Available time slots for a service on a date (Task 6.4.2).
+  Future<List<String>> checkAvailability({
+    required String serviceId,
+    required DateTime date,
+  }) async {
+    try {
+      final res = await _api.get(
+        ApiConstants.customerBookingsCheckAvailability,
+        params: {
+          'service_id': serviceId,
+          'date': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+        },
+      );
+      final data = res.data['data'] as Map<String, dynamic>;
+      return List<String>.from(data['available_slots'] as List? ?? []);
+    } catch (_) {
+      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+    }
+  }
 }

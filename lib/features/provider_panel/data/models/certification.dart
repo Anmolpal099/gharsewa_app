@@ -28,7 +28,9 @@ class Certification {
       documentUrl: json['document_url'] as String,
       fileType: json['file_type'] as String,
       isVerified: json['is_verified'] as bool? ?? false,
-      uploadedAt: DateTime.parse(json['uploaded_at'] as String),
+      uploadedAt: json['uploaded_at'] != null
+          ? DateTime.parse(json['uploaded_at'] as String)
+          : DateTime.now(),
       verifiedAt: json['verified_at'] != null
           ? DateTime.parse(json['verified_at'] as String)
           : null,

@@ -1,92 +1,102 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// DEPRECATED: This file is kept for backward compatibility
+// Use jwt_auth_service.dart instead
+//
+// This file re-exports the new JWT auth service with the old provider names
+// to maintain compatibility with existing code.
+
+export 'jwt_auth_service.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_state.dart';
-import '../api/api_client.dart';
+import 'jwt_auth_service.dart';
+import 'jwt_tokens.dart';
 
-// ── Stream provider: listens to Firebase auth changes ────────────────────────
+// ── Backward compatibility providers ──────────────────────────────────────────
+
+/// DEPRECATED: Use authStateProvider from jwt_auth_service.dart
+/// 
+/// Stream provider: listens to JWT auth state changes
+@Deprecated('Use authStateProvider from jwt_auth_service.dart')
 final authServiceProvider = StreamProvider<AuthState>((ref) {
-  return FirebaseAuth.instance.authStateChanges().asyncMap((user) async {
-    if (user == null) return const AuthState.unauthenticated();
-
-    final idTokenResult = await user.getIdTokenResult();
-    final role = AuthState.roleFromString(
-      idTokenResult.claims?['role'] as String?,
-    );
-
-    return AuthState(
-      status: AuthStatus.authenticated,
-      firebaseUser: user,
-      role: role,
-    );
-  });
+  final authService = ref.watch(jwtAuthServiceProvider);
+  return authService.authStateChanges;
 });
 
-// ── Actions provider ──────────────────────────────────────────────────────────
-final authActionsProvider = Provider<AuthActions>(
-  (ref) => AuthActions(ref.read(apiClientProvider)),
-);
+/// DEPRECATED: Use jwtAuthServiceProvider from jwt_auth_service.dart
+/// 
+/// Actions provider for backward compatibility
+@Deprecated('Use jwtAuthServiceProvider from jwt_auth_service.dart')
+final authActionsProvider = Provider<AuthActions>((ref) {
+  return AuthActions(ref.watch(jwtAuthServiceProvider));
+});
 
+/// DEPRECATED: Use JwtAuthService directly
+/// 
+/// Wrapper class for backward compatibility with existing code
+@Deprecated('Use JwtAuthService from jwt_auth_service.dart')
 class AuthActions {
-  AuthActions(this._apiClient);
-  final ApiClient _apiClient;
-  final _auth = FirebaseAuth.instance;
+  AuthActions(this._authService);
+  final JwtAuthService _authService;
 
-  /// Sign in with email and password
-  Future<void> signIn(String email, String password) async {
-    await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
+  /// Stream of authentication state changes
+  Stream<AuthState> authStateChanges() => _authService.authStateChanges;
+
+  /// Register new user
+  Future<void> register(String email, String password, String name, {String? role}) async {
+    await _authService.register(
+      email: email,
       password: password,
+      name: name,
+      role: role ?? 'customer', // Default to 'customer' if null
     );
   }
 
-  /// Register new user with email and password
-  Future<void> register(String email, String password, String name) async {
-    // Step 1: Create Firebase account
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+  /// Verify email with OTP
+  Future<void> verifyEmail(String email, String otp) async {
+    await _authService.verifyEmail(email: email, otp: otp);
+  }
 
-    // Update display name in Firebase
-    await credential.user?.updateDisplayName(name);
+  /// Sign in with email and password
+  Future<void> signIn(String email, String password) async {
+    await _authService.login(email: email, password: password);
+  }
 
-    // Step 2: Get ID token and send to Laravel to set role claims
-    final idToken = await credential.user?.getIdToken();
-    if (idToken != null) {
-      try {
-        await _apiClient.post('/v1/auth/register', data: {
-          'id_token': idToken,
-          'name': name,
-          'role': 'customer', // default role
-        });
-      } catch (_) {
-        // If Laravel call fails, still proceed — role will default to customer
-      }
-    }
-
-    // Step 5: Force token refresh to get new custom claims from Laravel
-    await credential.user?.getIdToken(true);
+  /// Refresh access token using refresh token
+  Future<void> refreshToken() async {
+    await _authService.refreshToken();
   }
 
   /// Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    await _authService.logout();
   }
 
-  /// Get fresh Firebase ID token (auto-refreshes if expired)
-  Future<String?> getIdToken({bool forceRefresh = false}) async {
-    return _auth.currentUser?.getIdToken(forceRefresh);
+  /// Send password reset OTP
+  Future<void> sendPasswordResetOtp(String email) async {
+    await _authService.sendPasswordResetOtp(email);
   }
 
-  /// Get user role from token claims
-  Future<UserRole> getUserRole() async {
-    final result = await _auth.currentUser?.getIdTokenResult();
-    return AuthState.roleFromString(result?.claims?['role'] as String?);
+  /// Reset password with OTP
+  Future<void> resetPassword(String email, String otp, String newPassword) async {
+    await _authService.resetPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPassword,
+    );
+  }
+
+  /// Get current user
+  Future<JwtUser?> getCurrentUser() async {
+    return await _authService.getCurrentUser();
   }
 
   /// Check if user is logged in
-  bool get isLoggedIn => _auth.currentUser != null;
+  Future<bool> isLoggedIn() async {
+    return await _authService.isLoggedIn();
+  }
 
-  /// Current Firebase user
-  User? get currentUser => _auth.currentUser;
+  /// Upgrade customer account to service provider
+  Future<void> becomeServiceProvider() async {
+    await _authService.becomeServiceProvider();
+  }
 }

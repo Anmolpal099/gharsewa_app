@@ -7,7 +7,7 @@ This project uses **Firebase Authentication** for:
 - ✅ Automatic token validation
 - ✅ Token refresh handling
 - ✅ Multi-platform support (Android, iOS, Web)
-- ✅ Role-based authentication (Customer, Service Provider, Admin)
+ Role-based authentication (Customer, Service Provider, Admin)
 
 ## Prerequisites
 

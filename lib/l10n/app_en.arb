@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "appTitle": "Gharsewa",
+  "providerExplore": "Explore",
+  "providerBookings": "Bookings",
+  "providerSafety": "Safety",
+  "providerProfile": "Profile",
+  "generateSop": "Generate SOP",
+  "saveSop": "Save SOP",
+  "acceptRequest": "Accept",
+  "schedule": "Schedule",
+  "invoices": "Invoices",
+  "support": "Support",
+  "inventory": "Inventory",
+  "browseServices": "Browse Services",
+  "confirmBooking": "Confirm Booking",
+  "bookingConfirmed": "Booking created successfully!"
+}

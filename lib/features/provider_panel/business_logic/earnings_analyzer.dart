@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../data/models/models.dart';
 import '../data/services/provider_api_service.dart';
+import 'provider_validators.dart';
 
 final earningsAnalyzerProvider =
     StateNotifierProvider<EarningsAnalyzer, AsyncValue<EarningsData>>((ref) {
@@ -48,5 +49,17 @@ class EarningsAnalyzer extends StateNotifier<AsyncValue<EarningsData>> {
   }
 
   String formatPercentage(double value) =>
-      '${value >= 0 ? '+' : ''}${value.toStringAsFixed(1)}%';
+      ProviderValidators.formatPercentage(value);
+
+  Future<EarningsData> getDailyEarnings() => _api.getEarnings(
+        startDate: DateTime.now().subtract(const Duration(days: 7)),
+        endDate: DateTime.now(),
+        viewType: EarningsViewType.daily,
+      );
+
+  Future<EarningsData> getWeeklyEarnings() => _api.getEarnings(
+        startDate: DateTime.now().subtract(const Duration(days: 28)),
+        endDate: DateTime.now(),
+        viewType: EarningsViewType.weekly,
+      );
 }
