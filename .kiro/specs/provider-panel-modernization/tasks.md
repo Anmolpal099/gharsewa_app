@@ -52,7 +52,7 @@ The implementation prioritizes incremental progress with early validation throug
     - Implement Hive initialization for offline storage
     - _Requirements: 19.1, 28.2_
 
-  - [~] 2.6 Create API endpoints integration
+  - [x] 2.6 Create API endpoints integration
     - Implement GET `/api/provider/profile/:id` endpoint call
     - Implement PUT `/api/provider/profile/:id` endpoint call
     - Implement POST `/api/provider/skills` endpoint call
