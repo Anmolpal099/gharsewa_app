@@ -155,6 +155,20 @@ class _UserTile extends ConsumerWidget {
               child: Text('Reset password'),
             ),
             const PopupMenuItem(value: 'detail', child: Text('View details')),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_forever, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Delete User',
+                    style: TextStyle(color: Colors.red[700]),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -177,7 +191,7 @@ class _UserTile extends ConsumerWidget {
         ref.invalidate(adminUsersProvider);
         _snack(context, 'User activated');
       } else if (action == 'deactivate') {
-        final reason = await _promptReason(context);
+        final reason = await _promptReason(context, 'Deactivation reason');
         if (reason == null) return;
         await api.deactivateUser(user.id, reason);
         ref.invalidate(adminUsersProvider);
@@ -199,22 +213,100 @@ class _UserTile extends ConsumerWidget {
             ),
           );
         }
+      } else if (action == 'delete') {
+        final confirmed = await _confirmDelete(context);
+        if (!confirmed) return;
+        final reason = await _promptReason(context, 'Deletion reason (required)');
+        if (reason == null) return;
+        await api.deleteUser(user.id, reason);
+        ref.invalidate(adminUsersProvider);
+        _snack(context, 'User deleted successfully');
       }
     } catch (e) {
       _snack(context, '$e', isError: true);
     }
   }
 
-  Future<String?> _promptReason(BuildContext context) async {
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red[700]),
+            const SizedBox(width: 8),
+            const Text('Delete User'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to permanently delete ${user.name}?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text('This action will:'),
+            const SizedBox(height: 8),
+            const Text('• Remove the user account permanently'),
+            const Text('• Delete all associated data'),
+            const Text('• Cancel any active bookings'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'This action cannot be undone!',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red[700],
+            ),
+            child: const Text('Delete User'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Future<String?> _promptReason(BuildContext context, String title) async {
     final ctrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deactivation reason'),
+        title: Text(title),
         content: TextField(
           controller: ctrl,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Enter reason...',
+          ),
           maxLines: 3,
+          autofocus: true,
         ),
         actions: [
           TextButton(

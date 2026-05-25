@@ -97,6 +97,18 @@ class AdminApiService {
     throw Exception(res.data['message'] ?? 'Password reset failed');
   }
 
+  /// Delete a user (customer or service provider)
+  /// This permanently removes the user from the system
+  Future<void> deleteUser(String id, String reason) async {
+    final res = await _api.delete(
+      '${ApiConstants.adminUsers}/$id',
+      data: {'reason': reason},
+    );
+    if (res.data['success'] != true) {
+      throw Exception(res.data['message'] ?? 'Delete failed');
+    }
+  }
+
   Future<List<AdminBookingItem>> getBookings({
     String? search,
     String? status,

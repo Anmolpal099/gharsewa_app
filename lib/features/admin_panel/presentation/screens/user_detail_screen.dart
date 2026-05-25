@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../business_logic/admin_providers.dart';
@@ -98,6 +99,18 @@ class UserDetailScreen extends ConsumerWidget {
                   onPressed: () => _resetPassword(context, ref),
                   icon: const Icon(Icons.lock_reset),
                   label: const Text('Reset password'),
+                ),
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: () => _deleteUser(context, ref, user.name),
+                  icon: Icon(Icons.delete_forever, color: Colors.red[700]),
+                  label: Text(
+                    'Delete User',
+                    style: TextStyle(color: Colors.red[700]),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.red[700]!),
+                  ),
                 ),
               ],
             ),
@@ -209,6 +222,107 @@ class UserDetailScreen extends ConsumerWidget {
     );
     if (ok == true && ctrl.text.trim().isNotEmpty) return ctrl.text.trim();
     return null;
+  }
+
+  Future<void> _deleteUser(
+    BuildContext context,
+    WidgetRef ref,
+    String userName,
+  ) async {
+    // First confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red[700]),
+            const SizedBox(width: 8),
+            const Text('Delete User'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to permanently delete $userName?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text('This action will:'),
+            const SizedBox(height: 8),
+            const Text('• Remove the user account permanently'),
+            const Text('• Delete all associated data'),
+            const Text('• Cancel any active bookings'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'This action cannot be undone!',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red[700],
+            ),
+            child: const Text('Delete User'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Get deletion reason
+    final reason = await _reasonDialog(context);
+    if (reason == null) return;
+
+    // Perform deletion
+    try {
+      await ref.read(adminApiServiceProvider).deleteUser(userId, reason);
+      ref.invalidate(adminUsersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Navigate back to users list
+        context.go('/admin/users');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete user: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
