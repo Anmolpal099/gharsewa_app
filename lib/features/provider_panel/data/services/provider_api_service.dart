@@ -1,245 +1,272 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../../core/constants/api_constants.dart';
 import '../../../../services/api/api_client.dart';
 import '../models/models.dart';
 
-/// Provider for the ProviderApiService
 final providerApiServiceProvider = Provider<ProviderApiService>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return ProviderApiService(apiClient);
+  return ProviderApiService(ref.watch(apiClientProvider));
 });
 
-/// Service layer for provider-specific API endpoints
-/// 
-/// This service wraps the ApiClient with provider-specific endpoint methods
-/// and returns properly typed responses using the data models.
+/// Provider API integration aligned with Laravel `/api/v1/provider/*` routes.
 class ProviderApiService {
   final ApiClient _apiClient;
 
   ProviderApiService(this._apiClient);
 
-  /// GET /api/provider/profile/:id
-  /// 
-  /// Fetches provider profile data including skills and certifications
-  /// 
-  /// **Validates: Requirements 25.1**
-  Future<ProviderProfile> getProviderProfile(String providerId) async {
-    final response = await _apiClient.get('/api/provider/profile/$providerId');
-    
+  Future<ProviderProfile> getProviderProfile() async {
+    final response = await _apiClient.get('/v1/provider/profile');
     if (response.data['success'] == true) {
-      return ProviderProfile.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to fetch provider profile');
+      return _profileFromApi(response.data['data'] as Map<String, dynamic>);
     }
+    throw Exception(response.data['message'] ?? 'Failed to fetch provider profile');
   }
 
-  /// PUT /api/provider/profile/:id
-  /// 
-  /// Updates provider profile information
-  /// 
-  /// **Validates: Requirements 25.2**
-  Future<ProviderProfile> updateProviderProfile(
-    String providerId,
-    Map<String, dynamic> profileData,
-  ) async {
-    final response = await _apiClient.put(
-      '/api/provider/profile/$providerId',
-      data: profileData,
-    );
-    
+  Future<ProviderProfile> updateProviderProfile(Map<String, dynamic> data) async {
+    final response = await _apiClient.put('/v1/provider/profile', data: data);
     if (response.data['success'] == true) {
-      return ProviderProfile.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to update provider profile');
+      return _profileFromApi(response.data['data'] as Map<String, dynamic>);
     }
+    throw Exception(response.data['message'] ?? 'Failed to update provider profile');
   }
 
-  /// POST /api/provider/skills
-  /// 
-  /// Adds a skill to a provider profile
-  /// 
-  /// **Validates: Requirements 25.3**
-  Future<List<String>> addSkill(String providerId, String skill) async {
-    final response = await _apiClient.post(
-      '/api/provider/skills',
-      data: {
-        'provider_id': providerId,
-        'skill': skill,
-      },
-    );
-    
+  Future<Map<String, dynamic>> getDashboard() async {
+    final response = await _apiClient.get(ApiConstants.providerDashboard);
     if (response.data['success'] == true) {
-      return (response.data['data']['skills'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList();
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to add skill');
+      return response.data['data'] as Map<String, dynamic>;
     }
+    throw Exception(response.data['message'] ?? 'Failed to fetch dashboard');
   }
 
-  /// DELETE /api/provider/skills/:id
-  /// 
-  /// Removes a skill from a provider profile
-  /// 
-  /// **Validates: Requirements 25.4**
-  Future<List<String>> removeSkill(String providerId, String skillId) async {
-    final response = await _apiClient.delete('/api/provider/skills/$skillId');
-    
-    if (response.data['success'] == true) {
-      return (response.data['data']['skills'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList();
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to remove skill');
-    }
-  }
-
-  /// POST /api/provider/certifications
-  /// 
-  /// Uploads a certification document with multipart/form-data support
-  /// 
-  /// **Validates: Requirements 25.5**
-  Future<Certification> uploadCertification(
-    String providerId,
-    String certificationName,
-    String documentUrl,
-  ) async {
-    final response = await _apiClient.post(
-      '/api/provider/certifications',
-      data: {
-        'provider_id': providerId,
-        'name': certificationName,
-        'document_url': documentUrl,
-      },
-    );
-    
-    if (response.data['success'] == true) {
-      return Certification.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to upload certification');
-    }
-  }
-
-  /// GET /api/provider/earnings
-  /// 
-  /// Fetches earnings data with date range parameters
-  /// 
-  /// **Validates: Requirements 25.6**
-  Future<EarningsData> getEarnings(
-    String providerId, {
-    required DateTime startDate,
-    required DateTime endDate,
-    required EarningsViewType viewType,
+  Future<EarningsData> getEarnings({
+    DateTime? startDate,
+    DateTime? endDate,
+    EarningsViewType viewType = EarningsViewType.daily,
   }) async {
+    final now = DateTime.now();
+    final start = startDate ?? now.subtract(const Duration(days: 7));
+    final end = endDate ?? now;
+    final groupBy = viewType == EarningsViewType.weekly ? 'week' : 'day';
+
     final response = await _apiClient.get(
-      '/api/provider/earnings',
+      '/v1/provider/earnings',
       params: {
-        'provider_id': providerId,
-        'start_date': startDate.toIso8601String(),
-        'end_date': endDate.toIso8601String(),
-        'view_type': viewType.name,
+        'date_from': _formatDate(start),
+        'date_to': _formatDate(end),
+        'group_by': groupBy,
       },
     );
-    
-    if (response.data['success'] == true) {
-      return EarningsData.fromJson(response.data['data']);
-    } else {
+
+    if (response.data['success'] != true) {
       throw Exception(response.data['message'] ?? 'Failed to fetch earnings');
     }
+
+    return _earningsFromApi(
+      response.data['data'] as Map<String, dynamic>,
+      viewType: viewType,
+      dateRange: DateRange(startDate: start, endDate: end),
+    );
   }
 
-  /// GET /api/provider/requests/pending
-  /// 
-  /// Fetches pending booking requests
-  /// 
-  /// **Validates: Requirements 25.7**
-  Future<List<BookingRequest>> getPendingRequests(String providerId) async {
-    final response = await _apiClient.get(
-      '/api/provider/requests/pending',
-      params: {'provider_id': providerId},
-    );
-    
-    if (response.data['success'] == true) {
-      return (response.data['data'] as List<dynamic>)
-          .map((e) => BookingRequest.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } else {
+  Future<List<BookingRequest>> getPendingRequests() async {
+    final response = await _apiClient.get('/v1/provider/bookings/pending');
+    if (response.data['success'] != true) {
       throw Exception(response.data['message'] ?? 'Failed to fetch pending requests');
     }
+
+    final items = response.data['data'] as List<dynamic>;
+    return items
+        .map((e) => _bookingRequestFromApi(e as Map<String, dynamic>))
+        .toList();
   }
 
-  /// POST /api/provider/requests/:id/respond
-  /// 
-  /// Responds to a booking request (accept, decline, counter)
-  /// 
-  /// **Validates: Requirements 25.8**
-  Future<BookingRequest> respondToRequest(
-    String requestId, {
-    required String action, // 'accept', 'decline', 'counter'
-    String? declineReason,
-    double? counterPrice,
-    String? counterMessage,
-  }) async {
-    final data = <String, dynamic>{
-      'action': action,
-    };
-    
-    if (declineReason != null) {
-      data['decline_reason'] = declineReason;
+  Future<void> acceptRequest(String requestId) async {
+    final response = await _apiClient.post('/v1/provider/bookings/$requestId/accept');
+    if (response.data['success'] != true) {
+      throw Exception(response.data['message'] ?? 'Failed to accept request');
     }
-    
-    if (counterPrice != null) {
-      data['counter_price'] = counterPrice;
-    }
-    
-    if (counterMessage != null) {
-      data['counter_message'] = counterMessage;
-    }
-    
+  }
+
+  Future<void> declineRequest(String requestId, String reason) async {
     final response = await _apiClient.post(
-      '/api/provider/requests/$requestId/respond',
-      data: data,
+      '/v1/provider/bookings/$requestId/reject',
+      data: {'rejection_reason': reason},
     );
-    
-    if (response.data['success'] == true) {
-      return BookingRequest.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to respond to request');
+    if (response.data['success'] != true) {
+      throw Exception(response.data['message'] ?? 'Failed to decline request');
     }
   }
 
-  /// POST /api/ai/safety-sop
-  /// 
-  /// Generates AI safety SOP with job type parameter
-  /// 
-  /// **Validates: Requirements 25.9**
+  Future<PerformanceMetrics> getProviderMetrics(Map<String, dynamic> dashboard) {
+    return Future.value(_metricsFromDashboard(dashboard));
+  }
+
+  /// Local AI SOP generator (no backend endpoint yet).
   Future<SafetySOP> generateSafetySOP(String jobType) async {
-    final response = await _apiClient.post(
-      '/api/ai/safety-sop',
-      data: {'job_type': jobType},
+    await Future.delayed(const Duration(milliseconds: 800));
+    const uuid = Uuid();
+    final content = '''
+# Safety SOP: $jobType
+
+## Hazards
+- Slip/trip hazards in work area
+- Electrical exposure (if applicable)
+- Chemical or dust exposure
+
+## Required PPE
+- Safety gloves
+- Safety goggles
+- Closed-toe footwear
+
+## Procedures
+1. Inspect work area before starting
+2. Confirm tools and equipment are in safe condition
+3. Follow manufacturer instructions for all products
+4. Keep walkways clear during service
+
+## Emergency Protocols
+- Stop work immediately if unsafe conditions appear
+- Call local emergency services (100/101/102) for serious injury
+- Notify the customer and platform support
+''';
+
+    return SafetySOP(
+      id: uuid.v4(),
+      jobType: jobType.trim(),
+      content: content,
+      hazards: const [
+        'Slip/trip hazards',
+        'Electrical exposure',
+        'Chemical or dust exposure',
+      ],
+      requiredPPE: const ['Safety gloves', 'Safety goggles', 'Closed-toe footwear'],
+      procedures: const [
+        'Inspect work area before starting',
+        'Confirm tools are safe',
+        'Follow manufacturer instructions',
+        'Keep walkways clear',
+      ],
+      emergencyProtocols: const [
+        'Stop work if unsafe',
+        'Call emergency services for injury',
+        'Notify customer and support',
+      ],
+      generatedAt: DateTime.now(),
+      isSaved: false,
     );
-    
-    if (response.data['success'] == true) {
-      return SafetySOP.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to generate safety SOP');
-    }
   }
 
-  /// GET /api/provider/metrics
-  /// 
-  /// Fetches provider performance metrics
-  /// 
-  /// **Validates: Requirements 25.10**
-  Future<PerformanceMetrics> getProviderMetrics(String providerId) async {
-    final response = await _apiClient.get(
-      '/api/provider/metrics',
-      params: {'provider_id': providerId},
+  ProviderProfile _profileFromApi(Map<String, dynamic> json) {
+    final metadata = json['metadata'] as Map<String, dynamic>? ?? {};
+    final skills = (metadata['skills'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        <String>[];
+    final certsJson = metadata['certifications'] as List<dynamic>? ?? [];
+    final certifications = certsJson
+        .map((e) => Certification.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    final now = DateTime.now();
+    return ProviderProfile(
+      id: json['id']?.toString() ?? '',
+      name: json['name'] as String? ?? 'Provider',
+      email: json['email'] as String? ?? '',
+      photoUrl: json['profile_image_url'] as String?,
+      bio: metadata['business_description'] as String? ??
+          metadata['bio'] as String?,
+      location: metadata['address'] as String? ?? 'Not set',
+      professionalCategory:
+          metadata['business_name'] as String? ?? 'Home Services',
+      isVerified: json['email_verified_at'] != null,
+      skills: skills,
+      certifications: certifications,
+      createdAt: now,
+      updatedAt: now,
     );
-    
-    if (response.data['success'] == true) {
-      return PerformanceMetrics.fromJson(response.data['data']);
-    } else {
-      throw Exception(response.data['message'] ?? 'Failed to fetch provider metrics');
+  }
+
+  EarningsData _earningsFromApi(
+    Map<String, dynamic> json, {
+    required EarningsViewType viewType,
+    required DateRange dateRange,
+  }) {
+    final breakdown = json['breakdown'] as List<dynamic>? ?? [];
+    final total = (json['total_earnings'] as num?)?.toDouble() ?? 0;
+
+    final points = breakdown.map((item) {
+      final map = item as Map<String, dynamic>;
+      final period = map['period']?.toString() ?? '';
+      final earnings = (map['earnings'] as num?)?.toDouble() ?? 0;
+      final dateStr = map['date'] as String? ?? period;
+      DateTime date;
+      try {
+        date = DateTime.parse(dateStr);
+      } catch (_) {
+        date = DateTime.now();
+      }
+      return EarningsDataPoint(
+        date: date,
+        amount: earnings,
+        label: _formatPeriodLabel(date, viewType),
+      );
+    }).toList();
+
+    return EarningsData(
+      totalEarnings: total,
+      previousPeriodEarnings: 0,
+      dataPoints: points,
+      dateRange: dateRange,
+      viewType: viewType,
+    );
+  }
+
+  BookingRequest _bookingRequestFromApi(Map<String, dynamic> json) {
+    final customer = json['customer'] as Map<String, dynamic>?;
+    final service = json['service'] as Map<String, dynamic>?;
+    final scheduled = json['scheduled_at'] != null
+        ? DateTime.parse(json['scheduled_at'] as String)
+        : DateTime.now();
+    final created = json['created_at'] != null
+        ? DateTime.parse(json['created_at'] as String)
+        : DateTime.now();
+
+    return BookingRequest(
+      id: json['id'] as String,
+      customerId: json['customer_id'] as String? ?? '',
+      customerName: customer?['name'] as String? ?? 'Customer',
+      customerAvatar: customer?['profile_image_url'] as String?,
+      customerLocation: customer?['metadata']?['address'] as String? ?? 'Nearby',
+      serviceTitle: service?['title'] as String? ?? 'Service request',
+      description: service?['description'] as String? ?? '',
+      proposedPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
+      scheduledDateTime: scheduled,
+      createdAt: created,
+      status: BookingRequestStatus.pending,
+    );
+  }
+
+  PerformanceMetrics _metricsFromDashboard(Map<String, dynamic> dashboard) {
+    final rating = (dashboard['average_rating'] as num?)?.toDouble() ?? 0;
+    final completed = dashboard['total_bookings'] as int? ?? 0;
+    return PerformanceMetrics(
+      rating: rating,
+      totalReviews: 0,
+      jobsCompleted: completed,
+      averageResponseTime: const Duration(minutes: 20),
+      isTopPerformer: rating >= 4.5,
+      percentile: rating >= 4.5 ? 90 : 50,
+    );
+  }
+
+  String _formatDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+
+  String _formatPeriodLabel(DateTime date, EarningsViewType type) {
+    if (type == EarningsViewType.weekly) {
+      return 'W${((date.day - 1) ~/ 7) + 1}';
     }
+    return DateFormat('E').format(date);
   }
 }

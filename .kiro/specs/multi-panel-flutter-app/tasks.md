@@ -303,99 +303,50 @@ lib/
 
 ## Epic 4: Authentication & Authorization
 
-### Task 4.1: Implement Firebase Authentication (Backend)
-**Description:** Configure Firebase Admin SDK in Laravel to verify Firebase ID tokens.
-**Requirements:** Requirement 1 (User Authentication and Authorization)
-**Estimated Time:** 4 hours
+2✅ Task 1: Remove Firebase
+✅ Task 2: Setup JWT
+✅ Task 3: Setup Email (Laravel Mail)
+✅ Task 4: Registration API
+- [x] 5. Implement Login API (Requirement 8) - 2 hours
+  - Create login endpoint with credential verification
+  - Generate JWT access and refresh tokens
+  - Implement rate limiting (5 attempts per 15 minutes)
+  - Update last_login_at timestamp
+  - Return tokens in response
 
-#### Sub-task 4.1.1: Install Firebase Admin SDK in Laravel
-**Description:** Install kreait/firebase-php package for Firebase Admin SDK.
-**Estimated Time:** 1 hour
-```bash
-composer require kreait/firebase-php
-composer require kreait/laravel-firebase
-```
+- [x] 6. Implement OTP Verification (Requirement 4) - 2 hours
+  - Update OtpController@verifyEmailOtp to return JWT tokens
+  - Mark email as verified in Laravel database
+  - Remove Firebase email verification code
+  - Generate JWT tokens after successful verification
 
-#### Sub-task 4.1.2: Create Firebase token verification middleware
-**Description:** Implement Laravel middleware that verifies Firebase ID tokens on every protected request.
-**Estimated Time:** 1.5 hours
-```php
-// Middleware verifies Firebase ID token from Authorization header
-// Extracts user UID and custom claims (role)
-// Attaches user info to request
-```
+- [x] 7. Implement Password Reset (Requirement 5) - 2 hours
+  - Update OtpController@resetPassword to update Laravel password
+  - Remove Firebase password update code
+  - Invalidate all refresh tokens on password change
+  - Send password changed confirmation email
 
-#### Sub-task 4.1.3: Create Firebase Cloud Function for role assignment
-**Description:** Write Cloud Function that sets custom claims (role) when a new user registers.
-**Estimated Time:** 1 hour
-```javascript
-// onUserCreate: sets default role = 'customer'
-// setUserRole: admin callable function to change roles
-```
+- [x] 8. Refactor Flutter Auth Service (Requirement 6) - 4 hours
+  - Create lib/services/auth/jwt_auth_service.dart
+  - Implement register, login, logout, refreshToken methods
+  - Create TokenInterceptor for automatic token refresh
+  - Update auth state provider to use JWT auth
+  - Implement secure token storage
 
-#### Sub-task 4.1.4: Implement role-based authorization middleware
-**Description:** Create middleware that checks Firebase custom claims for role-based access.
-**Estimated Time:** 0.5 hours
+- [x] 9. Update Flutter UI Screens (Requirements 7, 8) - 3 hours
+  - Update login_screen.dart to use JWT auth service
+  - Update registration flow to work with JWT backend
+  - Verify OTP screens work with new backend
+  - Update password reset screens
+  - Remove Firebase-specific code
 
-
-### Task 4.2: Implement Flutter Firebase Authentication Service
-**Description:** Create authentication service in Flutter using Firebase Auth SDK.
-**Requirements:** Requirement 1 (User Authentication and Authorization)
-**Estimated Time:** 4 hours
-
-#### Sub-task 4.2.1: Create AuthenticationService using Firebase Auth
-**Description:** Implement authentication service wrapping FirebaseAuth with login, logout, and token management.
-**Estimated Time:** 2 hours
-```dart
-// Uses FirebaseAuth.instance
-// signInWithEmailAndPassword()
-// createUserWithEmailAndPassword()
-// signOut()
-// currentUser.getIdToken() for API calls
-```
-
-#### Sub-task 4.2.2: Implement secure token storage
-**Description:** Cache Firebase ID token in flutter_secure_storage; refresh automatically via Firebase SDK.
-**Estimated Time:** 1 hour
-
-#### Sub-task 4.2.3: Create authentication state provider
-**Description:** Implement Riverpod provider that listens to FirebaseAuth.instance.authStateChanges() stream.
-**Estimated Time:** 1 hour
-
-### Task 4.3: Create Login UI
-**Description:** Build login screen with role selection and form validation.
-**Requirements:** Requirement 1 (User Authentication and Authorization)
-**Estimated Time:** 3 hours
-
-#### Sub-task 4.3.1: Create LoginScreen widget
-**Description:** Build login UI with email, password fields, and role selector.
-**Estimated Time:** 1.5 hours
-
-#### Sub-task 4.3.2: Implement form validation
-**Description:** Add email and password validation logic.
-**Estimated Time:** 0.5 hours
-
-#### Sub-task 4.3.3: Connect login UI to AuthenticationService
-**Description:** Wire up login form to authentication service and handle responses.
-**Estimated Time:** 1 hour
-
-### Task 4.4: Implement Token Refresh Logic
-**Description:** Firebase handles token refresh automatically. Configure Dio interceptor to always send fresh tokens.
-**Requirements:** Requirement 1 (User Authentication and Authorization)
-**Estimated Time:** 2 hours
-
-#### Sub-task 4.4.1: Create Firebase token interceptor for Dio
-**Description:** Implement Dio interceptor that calls user.getIdToken() before every API request to always send a fresh Firebase ID token.
-**Estimated Time:** 1.5 hours
-```dart
-// On each request: attach Authorization: Bearer <firebase_id_token>
-// Firebase SDK auto-refreshes token if expired (every 1 hour)
-// On 401 response: force token refresh with getIdToken(true)
-```
-
-#### Sub-task 4.4.2: Handle token expiry and unauthenticated scenarios
-**Description:** Redirect to login screen when Firebase session is fully expired or revoked.
-**Estimated Time:** 0.5 hours
+- [x] 10. Testing & Validation (All requirements) - 4 hours
+  - Test all backend API endpoints
+  - Test Flutter authentication flows end-to-end
+  - Verify email sending works
+  - Test token refresh mechanism
+  - Test rate limiting and security measures
+  - Verify error handling
 
 ## Epic 5: Data Models & State Management(review from here )
 
@@ -592,104 +543,189 @@ composer require kreait/laravel-firebase
 
 ## Epic 7: Service Provider Panel Implementation
 
-### Task 7.1: Create Service Provider Panel Structure
-**Description:** Set up base structure for provider panel with navigation.
-**Requirements:** Requirement 6, 7, 8 (Provider features)
-**Estimated Time:** 3 hours
+**Status:** ✅ COMPLETED (Basic implementation) | 🚧 IN PROGRESS (Modernization)
 
-#### Sub-task 7.1.1: Create ServiceProviderPanel widget
+### Task 7.1: Create Provider Panel Structure ✅
+**Description:** Set up base structure for provider panel with navigation.
+**Requirements:** Requirement 6, 7 (Provider features)
+**Estimated Time:** 3 hours
+**Status:** ✅ COMPLETED
+
+#### Sub-task 7.1.1: Create ProviderPanel widget ✅
 **Description:** Build main provider panel widget with bottom navigation.
 **Estimated Time:** 1.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.1.2: Set up provider routes
+#### Sub-task 7.1.2: Set up provider routes ✅
 **Description:** Define routes for provider screens (dashboard, bookings, services).
 **Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.1.3: Create provider navigation bar
+#### Sub-task 7.1.3: Create provider navigation bar ✅
 **Description:** Build bottom navigation bar for provider panel.
 **Estimated Time:** 0.5 hours
+**Status:** ✅ COMPLETED
 
-### Task 7.2: Implement Provider Dashboard
-**Description:** Create dashboard with key metrics and analytics.
-**Requirements:** Requirement 6 (Service Provider Dashboard)
+### Task 7.2: Implement Provider Dashboard ✅
+**Description:** Create provider dashboard with metrics and overview.
+**Requirements:** Requirement 6 (Provider Dashboard)
 **Estimated Time:** 4 hours
+**Status:** ✅ COMPLETED
 
-
-#### Sub-task 7.2.1: Create DashboardScreen
-**Description:** Build dashboard layout with metric cards.
+#### Sub-task 7.2.1: Create ProviderDashboardScreen ✅
+**Description:** Build dashboard layout with metrics cards.
 **Estimated Time:** 1.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.2.2: Implement earnings display
-**Description:** Add widget showing current month earnings.
+#### Sub-task 7.2.2: Implement provider metrics ✅
+**Description:** Display total bookings, earnings, and rating.
 **Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.2.3: Add booking statistics
-**Description:** Display pending, confirmed, and completed booking counts.
+#### Sub-task 7.2.3: Add recent bookings list ✅
+**Description:** Display recent booking requests on dashboard.
 **Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.2.4: Implement bookings chart
-**Description:** Add chart showing bookings over time using fl_chart package.
+#### Sub-task 7.2.4: Add quick actions ✅
+**Description:** Add quick action buttons for common tasks.
 **Estimated Time:** 0.5 hours
+**Status:** ✅ COMPLETED
 
-### Task 7.3: Implement Booking Request Management
-**Description:** Create screens for managing incoming booking requests.
-**Requirements:** Requirement 7 (Service Provider Booking Management)
+### Task 7.3: Implement Booking Request Management ✅
+**Description:** Create screens for managing booking requests.
+**Requirements:** Requirement 7 (Provider Booking Management)
 **Estimated Time:** 4 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.3.1: Create BookingRequestsScreen
-**Description:** Build screen displaying pending booking requests.
+#### Sub-task 7.3.1: Create ProviderBookingsScreen ✅
+**Description:** Build screen displaying all booking requests.
 **Estimated Time:** 1.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.3.2: Implement accept/reject actions
-**Description:** Add buttons and logic for accepting or rejecting bookings.
-**Estimated Time:** 1.5 hours
+#### Sub-task 7.3.2: Implement booking filters ✅
+**Description:** Add filters for booking status (pending, accepted, completed).
+**Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.3.3: Add rejection reason dialog
-**Description:** Create dialog for entering rejection reason.
+#### Sub-task 7.3.3: Implement booking actions ✅
+**Description:** Add accept/reject functionality for booking requests.
+**Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
+
+#### Sub-task 7.3.4: Add booking detail view ✅
+**Description:** Create detailed view for individual bookings.
 **Estimated Time:** 0.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.3.4: Implement booking completion
-**Description:** Add functionality to mark bookings as completed.
-**Estimated Time:** 0.5 hours
-
-### Task 7.4: Implement Service Management
-**Description:** Create screens for managing service offerings.
-**Requirements:** Requirement 8 (Service Provider Service Management)
+### Task 7.4: Implement Service Management ✅
+**Description:** Create screens for managing provider services.
+**Requirements:** Requirement 6 (Provider Service Management)
 **Estimated Time:** 4 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.4.1: Create ServicesListScreen
+#### Sub-task 7.4.1: Create ProviderServicesScreen ✅
 **Description:** Build screen displaying provider's services.
-**Estimated Time:** 1 hour
-
-#### Sub-task 7.4.2: Create AddServiceScreen
-**Description:** Build form for creating new services.
 **Estimated Time:** 1.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.4.3: Implement service editing
+#### Sub-task 7.4.2: Implement service creation ✅
+**Description:** Add form for creating new services.
+**Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
+
+#### Sub-task 7.4.3: Implement service editing ✅
 **Description:** Add functionality to edit existing services.
 **Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.4.4: Add service activation/deactivation
-**Description:** Implement toggle for activating/deactivating services.
+#### Sub-task 7.4.4: Implement service deletion ✅
+**Description:** Add functionality to delete services.
 **Estimated Time:** 0.5 hours
+**Status:** ✅ COMPLETED
 
-### Task 7.5: Implement Provider Analytics
-**Description:** Create analytics screen with detailed performance metrics.
-**Requirements:** Requirement 6 (Service Provider Dashboard)
+### Task 7.5: Implement Provider Profile ✅
+**Description:** Create provider profile screen with edit functionality.
+**Requirements:** Requirement 1 (User management)
 **Estimated Time:** 3 hours
+**Status:** ✅ COMPLETED
 
-
-#### Sub-task 7.5.1: Create AnalyticsScreen
-**Description:** Build screen with detailed analytics and charts.
+#### Sub-task 7.5.1: Create ProviderProfileScreen ✅
+**Description:** Build screen displaying provider profile information.
 **Estimated Time:** 1.5 hours
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.5.2: Implement date range selector
-**Description:** Add date range picker for filtering analytics.
+#### Sub-task 7.5.2: Implement profile editing ✅
+**Description:** Add form for editing profile details.
 **Estimated Time:** 1 hour
+**Status:** ✅ COMPLETED
 
-#### Sub-task 7.5.3: Add revenue breakdown chart
-**Description:** Display revenue breakdown by service category.
+#### Sub-task 7.5.3: Add profile image upload ✅
+**Description:** Implement image picker and upload functionality.
 **Estimated Time:** 0.5 hours
+**Status:** ✅ COMPLETED
+
+### Task 7.6: Provider Panel Modernization 🚧
+**Description:** Modernize provider panel with Material Design 3, enhanced features, and AI integration.
+**Requirements:** All provider panel requirements + new modernization requirements
+**Estimated Time:** 40+ hours
+**Status:** 🚧 IN PROGRESS (5/84 tasks completed - 6%)
+
+**Spec Reference:** `.kiro/specs/provider-panel-modernization/`
+
+#### Phase 1: Data Layer (Wave 0-1) ✅
+**Status:** ✅ COMPLETED
+- ✅ Task 1: Project structure and core data models (11 models, 5 enums)
+- ✅ Task 2.1: API client with authentication and error handling
+- ✅ Task 2.2: Document uploader service with compression
+- ✅ Task 2.5: Cache manager with Hive support
+- ✅ Task 2.6: API endpoints integration (10 endpoints)
+
+#### Phase 2: Business Logic (Wave 2) 🚧
+**Status:** 🔄 QUEUED (8 tasks ready)
+- ⏳ Task 3.1: Profile Manager with ChangeNotifier
+- ⏳ Task 3.3: Skill Manager with ChangeNotifier
+- ⏳ Task 3.6: Certification Manager with ChangeNotifier
+- ⏳ Task 3.7: Earnings Analyzer with ChangeNotifier
+- ⏳ Task 3.10: Performance Tracker with ChangeNotifier
+- ⏳ Task 3.13: Request Manager with ChangeNotifier
+- ⏳ Task 3.17: AI Suggestion Engine
+- ⏳ Task 3.18: Safety Center manager with ChangeNotifier
+
+#### Phase 3: UI Components (Wave 3-5) ⏳
+**Status:** ⏳ PENDING
+- 8 reusable widgets (GradientCard, SkillChip, MetricCard, etc.)
+- 2 chart visualization components (ChartRenderer, EarningsChart)
+
+#### Phase 4: Screens (Wave 6-9) ⏳
+**Status:** ⏳ PENDING
+- Enhanced Profile Screen with completeness indicator
+- Modernized Dashboard with earnings analytics
+- AI Safety Center with SOP generator
+- Smart Request Management with counter-offers
+
+#### Phase 5: Navigation & Polish (Wave 10-15) ⏳
+**Status:** ⏳ PENDING
+- Bottom navigation with 4 tabs
+- Error handling and loading states
+- Accessibility features (WCAG AA compliance)
+- Performance optimizations
+- Material Design 3 theming
+- Internationalization support
+
+**Modernization Features:**
+- 📊 Earnings analytics with interactive charts (daily/weekly views)
+- 🎯 Profile completeness indicator (photo, bio, skills, certifications)
+- 🤖 AI-powered safety SOP generator
+- 💡 Smart suggestions for profile improvement
+- 📱 Modern Material Design 3 UI with gradients
+- 🔒 Enhanced security with document verification
+- ⚡ Performance optimizations (caching, lazy loading)
+- ♿ Accessibility compliance (WCAG AA)
+- 🌐 Internationalization support
+
+**Progress:** 5/84 tasks completed (6%)
+**Next Milestone:** Complete Wave 2 - Business Logic Managers (8 tasks)
 
 ## Epic 8: Admin Panel Implementation
 

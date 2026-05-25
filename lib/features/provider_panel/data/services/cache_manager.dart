@@ -2,9 +2,15 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+final _sharedCacheManager = CacheManager();
+
 final cacheManagerProvider = Provider<CacheManager>(
-  (ref) => CacheManager(),
+  (ref) => _sharedCacheManager,
 );
+
+/// Call once at app startup (after [Hive.initFlutter]).
+Future<void> initializeProviderPanelCache() =>
+    _sharedCacheManager.initializeHive();
 
 /// Cache Manager for provider panel data with in-memory cache and Hive offline storage
 /// 
