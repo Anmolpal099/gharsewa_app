@@ -41,16 +41,11 @@ class AdminProfileScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: colorScheme.primaryContainer,
-                        backgroundImage: user.profileImageUrl != null
-                            ? NetworkImage(user.profileImageUrl!)
-                            : null,
-                        child: user.profileImageUrl == null
-                            ? Icon(
-                                Icons.admin_panel_settings,
-                                size: 50,
-                                color: colorScheme.onPrimaryContainer,
-                              )
-                            : null,
+                        child: Icon(
+                          Icons.admin_panel_settings,
+                          size: 50,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
                       ),
                       const SizedBox(width: 24),
                       // User Info
