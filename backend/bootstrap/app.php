@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\ApiRateLimitMiddleware;
@@ -32,6 +33,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', [
             ApiRateLimitMiddleware::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        // ── AI Analytics Generation ────────────────────────────────
+        // Generate all analytics daily at midnight
+        $schedule->command('ai:generate-analytics --type=all')
+            ->daily()
+            ->at('00:00')
+            ->timezone('UTC')
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('AI analytics generated successfully');
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('AI analytics generation failed');
+            });
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Return JSON for all API exceptions

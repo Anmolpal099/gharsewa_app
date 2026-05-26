@@ -12,6 +12,12 @@ use App\Http\Controllers\API\V1\Admin\AdminController;
 use App\Http\Controllers\API\V1\Admin\UserManagementController;
 use App\Http\Controllers\API\V1\Admin\BookingManagementController;
 use App\Http\Controllers\API\V1\Ai\AiController;
+use App\Http\Controllers\API\V1\AI\RecommendationController;
+use App\Http\Controllers\API\V1\AI\MatchingController;
+use App\Http\Controllers\API\V1\AI\AnalyticsController;
+use App\Http\Controllers\API\V1\AI\AIHealthController;
+use App\Http\Controllers\API\V1\AI\NotificationController as AINotificationController;
+use App\Http\Controllers\API\V1\Notification\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +67,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/image', [CustomerController::class, 'uploadProfileImage']);
         });
 
+        // ─── Notifications (All authenticated users) ────────────
+        Route::prefix('notifications')->group(function () {
+            Route::get('scheduled', [NotificationController::class, 'getScheduled']);
+            Route::get('engagement-metrics', [NotificationController::class, 'getEngagementMetrics']);
+            Route::get('preferences', [NotificationController::class, 'getPreferences']);
+            Route::post('schedule', [NotificationController::class, 'schedule']);
+            Route::post('engagement', [NotificationController::class, 'recordEngagement']);
+            Route::post('send-immediate', [NotificationController::class, 'sendImmediate']);
+            Route::put('preferences', [NotificationController::class, 'updatePreferences']);
+            Route::delete('{scheduleId}', [NotificationController::class, 'cancel']);
+        });
+
         // ─── Customer ───────────────────────────────────────────
         Route::middleware('role:customer')->prefix('customer')->group(function () {
             Route::get('dashboard', [CustomerController::class, 'dashboard']);
@@ -71,6 +89,14 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/check-availability', [CustomerBookingController::class, 'checkAvailability']);
             Route::apiResource('bookings', CustomerBookingController::class);
             Route::post('bookings/{id}/cancel', [CustomerBookingController::class, 'cancel']);
+
+            // AI Recommendations
+            Route::prefix('ai')->group(function () {
+                Route::get('recommendations', [RecommendationController::class, 'index']);
+                Route::post('recommendations/feedback', [RecommendationController::class, 'feedback']);
+                Route::get('recommendations/stats', [RecommendationController::class, 'stats']);
+                Route::get('providers/matches', [MatchingController::class, 'findMatches']);
+            });
         });
 
         // ─── Provider ───────────────────────────────────────────
@@ -94,6 +120,11 @@ Route::prefix('v1')->group(function () {
 
             Route::apiResource('services', ServiceController::class);
             Route::patch('services/{id}/status', [ServiceController::class, 'updateStatus']);
+
+            // AI Matching
+            Route::prefix('ai')->group(function () {
+                Route::get('bookings/{id}/match-score', [MatchingController::class, 'getMatchScore']);
+            });
         });
 
         // ─── Admin ──────────────────────────────────────────────
@@ -111,6 +142,22 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings', [BookingManagementController::class, 'index']);
             Route::post('bookings/{id}/cancel', [BookingManagementController::class, 'cancel']);
             Route::post('bookings/{id}/note', [BookingManagementController::class, 'addNote']);
+
+            // AI Analytics & Health
+            Route::prefix('ai')->group(function () {
+                Route::get('bookings/{id}/match-scores', [MatchingController::class, 'getAllMatchScores']);
+                Route::get('analytics/predictions', [AnalyticsController::class, 'predictions']);
+                Route::get('analytics/trends', [AnalyticsController::class, 'trends']);
+                Route::get('analytics/insights', [AnalyticsController::class, 'insights']);
+                Route::get('analytics/history', [AnalyticsController::class, 'history']);
+                Route::get('health', [AIHealthController::class, 'health']);
+                Route::get('metrics', [AIHealthController::class, 'metrics']);
+                Route::get('models', [AIHealthController::class, 'models']);
+                
+                // Notification A/B Testing
+                Route::get('notifications/ab-test-results', [AINotificationController::class, 'getAbTestResults']);
+                Route::get('notifications/performance', [AINotificationController::class, 'getPerformanceMetrics']);
+            });
         });
 
         Route::prefix('test')->group(function () {

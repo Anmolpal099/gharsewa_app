@@ -102,7 +102,7 @@ class AdminApiService {
   Future<void> deleteUser(String id, String reason) async {
     final res = await _api.delete(
       '${ApiConstants.adminUsers}/$id',
-      data: {'reason': reason},
+      params: {'reason': reason},
     );
     if (res.data['success'] != true) {
       throw Exception(res.data['message'] ?? 'Delete failed');

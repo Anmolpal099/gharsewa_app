@@ -6,6 +6,8 @@ use App\Http\Controllers\API\V1\BaseController;
 use App\Models\Booking;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\AIRequest;
+use App\Services\AI\AIService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +64,9 @@ class AdminController extends BaseController
         usort($activities, fn ($a, $b) => strcmp($b['timestamp'] ?? '', $a['timestamp'] ?? ''));
         $activities = array_slice($activities, 0, 8);
 
+        // AI Metrics
+        $aiMetrics = $this->getAIMetrics();
+
         return $this->success([
             'total_users' => $totalUsers,
             'total_customers' => $totalCustomers,
@@ -77,7 +82,121 @@ class AdminController extends BaseController
             'active_services' => Service::where('status', 'active')->count(),
             'platform_rating' => 4.6,
             'recent_activities' => $activities,
+            'ai_metrics' => $aiMetrics,
         ]);
+    }
+
+    /**
+     * Get AI system metrics for dashboard
+     */
+    private function getAIMetrics(): array
+    {
+        try {
+            $aiService = new AIService();
+            
+            // Get AI request statistics (all time)
+            $totalAIRequests = AIRequest::count();
+            $successfulRequests = AIRequest::where('success', true)->count();
+            $failedRequests = AIRequest::where('success', false)->count();
+            
+            // Calculate success rate
+            $successRate = $totalAIRequests > 0 
+                ? round(($successfulRequests / $totalAIRequests) * 100, 2) 
+                : 0;
+            
+            // Get average response time (successful requests only)
+            $avgResponseTime = AIRequest::where('success', true)->avg('response_time_ms');
+            
+            // Check Ollama health and uptime
+            $ollamaHealthy = $aiService->healthCheck();
+            
+            // Calculate Ollama uptime based on recent requests
+            $recentTotal = AIRequest::where('created_at', '>=', now()->subHour())->count();
+            $recentSuccessful = AIRequest::where('created_at', '>=', now()->subHour())
+                ->where('success', true)
+                ->count();
+            $ollamaUptime = $recentTotal > 0 
+                ? round(($recentSuccessful / $recentTotal) * 100, 2) 
+                : ($ollamaHealthy ? 100 : 0);
+            
+            // Get recent AI requests (last 24 hours)
+            $recentRequests = AIRequest::where('created_at', '>=', now()->subDay())->count();
+            
+            // Get requests by type (last 24 hours for real-time view)
+            $requestsByType = AIRequest::select('request_type', DB::raw('count(*) as count'))
+                ->where('created_at', '>=', now()->subDay())
+                ->groupBy('request_type')
+                ->orderBy('count', 'desc')
+                ->limit(5)
+                ->get()
+                ->pluck('count', 'request_type')
+                ->toArray();
+            
+            // Get hourly request trend (last 24 hours)
+            $hourlyTrend = AIRequest::select(
+                    DB::raw('HOUR(created_at) as hour'),
+                    DB::raw('count(*) as count')
+                )
+                ->where('created_at', '>=', now()->subDay())
+                ->groupBy('hour')
+                ->orderBy('hour')
+                ->get()
+                ->pluck('count', 'hour')
+                ->toArray();
+            
+            // Get recent errors (last 10)
+            $recentErrors = AIRequest::where('success', false)
+                ->where('created_at', '>=', now()->subDay())
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get(['request_type', 'error_message', 'created_at'])
+                ->map(function ($error) {
+                    return [
+                        'type' => $error->request_type,
+                        'message' => substr($error->error_message ?? 'Unknown error', 0, 100),
+                        'time' => $error->created_at->diffForHumans()
+                    ];
+                })
+                ->toArray();
+            
+            return [
+                'total_requests' => $totalAIRequests,
+                'successful_requests' => $successfulRequests,
+                'failed_requests' => $failedRequests,
+                'success_rate' => $successRate,
+                'avg_response_time_ms' => round($avgResponseTime ?? 0, 2),
+                'ollama_status' => $ollamaHealthy ? 'healthy' : 'unhealthy',
+                'ollama_uptime' => $ollamaUptime,
+                'recent_requests_24h' => $recentRequests,
+                'requests_by_type' => $requestsByType,
+                'hourly_trend' => $hourlyTrend,
+                'recent_errors' => $recentErrors,
+                'model' => config('services.ollama.model', 'qwen3-vl:2b'),
+                'last_updated' => now()->toIso8601String()
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get AI metrics', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'total_requests' => 0,
+                'successful_requests' => 0,
+                'failed_requests' => 0,
+                'success_rate' => 0,
+                'avg_response_time_ms' => 0,
+                'ollama_status' => 'unknown',
+                'ollama_uptime' => 0,
+                'recent_requests_24h' => 0,
+                'requests_by_type' => [],
+                'hourly_trend' => [],
+                'recent_errors' => [],
+                'model' => config('services.ollama.model', 'qwen3-vl:2b'),
+                'error' => 'Failed to retrieve AI metrics',
+                'last_updated' => now()->toIso8601String()
+            ];
+        }
     }
 
     public function analytics(Request $request): JsonResponse

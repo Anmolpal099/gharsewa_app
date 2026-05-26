@@ -5,6 +5,7 @@ import '../../business_logic/admin_providers.dart';
 import '../widgets/activity_timeline.dart';
 import '../widgets/admin_stat_card.dart';
 import '../widgets/admin_trend_chart.dart';
+import '../widgets/ai_analytics_section.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
@@ -162,6 +163,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+                const AIAnalyticsSection(),
                 const SizedBox(height: 24),
                 ActivityTimeline(activities: dash.recentActivities),
               ],

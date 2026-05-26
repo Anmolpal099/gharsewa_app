@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API\V1\Customer;
 use App\Http\Controllers\API\V1\BaseController;
 use App\Models\Booking;
 use App\Models\Service;
+use App\Jobs\AI\CalculateMatchScoresJob;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +14,13 @@ use Illuminate\Support\Facades\Validator;
 
 class BookingController extends BaseController
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * List customer's bookings
      * 
@@ -99,6 +108,57 @@ class BookingController extends BaseController
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
+            
+            // Queue AI match score calculation for async processing
+            try {
+                CalculateMatchScoresJob::dispatch($booking)->onQueue('ai-processing');
+                Log::info('Match score calculation queued', [
+                    'booking_id' => $booking->id
+                ]);
+            } catch (\Exception $e) {
+                // Log error but don't fail the booking
+                Log::error('Failed to queue match score calculation', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // Send booking confirmation notification to customer (urgent)
+            try {
+                $this->notificationService->sendBookingNotification(
+                    auth()->user(),
+                    'booking_created',
+                    [
+                        'booking_id' => $booking->id,
+                        'service_name' => $service->name,
+                        'scheduled_at' => $booking->scheduled_at,
+                        'total_price' => $booking->total_price,
+                        'currency' => $booking->currency
+                    ],
+                    true // urgent
+                );
+                
+                // Send notification to provider (non-urgent, use AI timing)
+                if ($booking->provider) {
+                    $this->notificationService->sendBookingNotification(
+                        $booking->provider,
+                        'booking_created',
+                        [
+                            'booking_id' => $booking->id,
+                            'customer_name' => auth()->user()->name,
+                            'service_name' => $service->name,
+                            'scheduled_at' => $booking->scheduled_at
+                        ],
+                        false // non-urgent
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the booking
+                Log::error('Failed to send booking notification', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             Log::info('Booking created', [
                 'booking_id' => $booking->id,
@@ -216,6 +276,43 @@ class BookingController extends BaseController
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
+            
+            // Send cancellation notification to customer (urgent)
+            try {
+                $this->notificationService->sendBookingNotification(
+                    auth()->user(),
+                    'booking_cancelled',
+                    [
+                        'booking_id' => $booking->id,
+                        'service_name' => $booking->service->name,
+                        'scheduled_at' => $booking->scheduled_at,
+                        'cancellation_reason' => $request->cancellation_reason
+                    ],
+                    true // urgent
+                );
+                
+                // Send notification to provider (urgent)
+                if ($booking->provider) {
+                    $this->notificationService->sendBookingNotification(
+                        $booking->provider,
+                        'booking_cancelled',
+                        [
+                            'booking_id' => $booking->id,
+                            'customer_name' => auth()->user()->name,
+                            'service_name' => $booking->service->name,
+                            'scheduled_at' => $booking->scheduled_at,
+                            'cancellation_reason' => $request->cancellation_reason
+                        ],
+                        true // urgent
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the cancellation
+                Log::error('Failed to send cancellation notification', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             Log::info('Booking cancelled', [
                 'booking_id' => $id,

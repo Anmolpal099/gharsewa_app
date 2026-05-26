@@ -1,0 +1,1 @@
+1779797948s:233:"O:22:"App\DTOs\AI\AIResponse":4:{s:7:"content";s:0:"";s:7:"success";b:1;s:5:"error";N;s:8:"metadata";a:5:{s:5:"model";s:11:"qwen3-vl:2b";s:14:"total_duration";N;s:13:"load_duration";N;s:17:"prompt_eval_count";N;s:10:"eval_count";N;}}";

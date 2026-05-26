@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\V1\Provider;
 
 use App\Http\Controllers\API\V1\BaseController;
 use App\Models\Booking;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,13 @@ use Illuminate\Support\Facades\Validator;
 
 class BookingController extends BaseController
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * List provider's bookings
      * 
@@ -153,6 +161,27 @@ class BookingController extends BaseController
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
             
+            // Send acceptance notification to customer (urgent)
+            try {
+                $this->notificationService->sendBookingNotification(
+                    $booking->customer,
+                    'booking_accepted',
+                    [
+                        'booking_id' => $booking->id,
+                        'provider_name' => auth()->user()->name,
+                        'service_name' => $booking->service->name,
+                        'scheduled_at' => $booking->scheduled_at
+                    ],
+                    true // urgent
+                );
+            } catch (\Exception $e) {
+                // Log error but don't fail the acceptance
+                Log::error('Failed to send acceptance notification', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
             Log::info('Booking accepted', [
                 'booking_id' => $id,
                 'provider_id' => $providerId
@@ -225,6 +254,28 @@ class BookingController extends BaseController
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
+            
+            // Send rejection notification to customer (urgent)
+            try {
+                $this->notificationService->sendBookingNotification(
+                    $booking->customer,
+                    'booking_rejected',
+                    [
+                        'booking_id' => $booking->id,
+                        'provider_name' => auth()->user()->name,
+                        'service_name' => $booking->service->name,
+                        'scheduled_at' => $booking->scheduled_at,
+                        'rejection_reason' => $request->rejection_reason
+                    ],
+                    true // urgent
+                );
+            } catch (\Exception $e) {
+                // Log error but don't fail the rejection
+                Log::error('Failed to send rejection notification', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             Log::info('Booking rejected', [
                 'booking_id' => $id,
@@ -353,6 +404,27 @@ class BookingController extends BaseController
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
+            
+            // Send completion notification to customer (non-urgent, use AI timing)
+            try {
+                $this->notificationService->sendBookingNotification(
+                    $booking->customer,
+                    'booking_completed',
+                    [
+                        'booking_id' => $booking->id,
+                        'provider_name' => auth()->user()->name,
+                        'service_name' => $booking->service->name,
+                        'completed_at' => now()->toIso8601String()
+                    ],
+                    false // non-urgent
+                );
+            } catch (\Exception $e) {
+                // Log error but don't fail the completion
+                Log::error('Failed to send completion notification', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
             
             Log::info('Booking completed', [
                 'booking_id' => $id,

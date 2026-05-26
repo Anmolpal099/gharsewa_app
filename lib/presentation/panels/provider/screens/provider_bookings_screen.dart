@@ -6,6 +6,8 @@ import '../../../../features/provider_panel/business_logic/dashboard_controller.
 import '../../../../features/provider_panel/business_logic/provider_bookings_providers.dart';
 import '../../../../features/provider_panel/presentation/widgets/recommended_bookings_section.dart';
 import '../../../../features/provider_panel/presentation/widgets/scheduling_assistant_banner.dart';
+import '../../../../services/ai/ai_api_service.dart';
+import '../../../../services/ai/models/ai_match_score.dart';
 
 class ProviderBookingsScreen extends ConsumerStatefulWidget {
   const ProviderBookingsScreen({super.key});
@@ -17,6 +19,7 @@ class ProviderBookingsScreen extends ConsumerStatefulWidget {
 class _ProviderBookingsScreenState extends ConsumerState<ProviderBookingsScreen> 
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _sortByMatchScore = false;
 
   @override
   void initState() {
@@ -41,13 +44,34 @@ class _ProviderBookingsScreenState extends ConsumerState<ProviderBookingsScreen>
         const RecommendedBookingsSection(),
         Material(
           color: Theme.of(context).colorScheme.surface,
-          child: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Pending'),
-              Tab(text: 'Confirmed'),
-              Tab(text: 'Completed'),
-              Tab(text: 'All'),
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Pending'),
+                  Tab(text: 'Confirmed'),
+                  Tab(text: 'Completed'),
+                  Tab(text: 'All'),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    const Text('Sort by match score', style: TextStyle(fontSize: 14)),
+                    const Spacer(),
+                    Switch(
+                      value: _sortByMatchScore,
+                      onChanged: (value) {
+                        setState(() {
+                          _sortByMatchScore = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -110,6 +134,19 @@ class _ProviderBookingsScreenState extends ConsumerState<ProviderBookingsScreen>
       );
     }
 
+    // Sort bookings by match score if enabled
+    List<BookingModel> sortedBookings = List.from(bookings);
+    if (_sortByMatchScore) {
+      // We'll sort asynchronously using a Consumer to watch match scores
+      return _SortedBookingList(
+        bookings: sortedBookings,
+        type: type,
+        onAccept: _handleAccept,
+        onReject: _handleReject,
+        onComplete: _handleComplete,
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: bookings.length,
@@ -118,12 +155,14 @@ class _ProviderBookingsScreenState extends ConsumerState<ProviderBookingsScreen>
         if (booking.isPending) {
           return _BookingRequestCard(
             booking: booking,
+            sortByMatchScore: _sortByMatchScore,
             onAccept: () => _handleAccept(booking.id),
             onReject: () => _handleReject(booking.id),
           );
         } else {
           return _BookingHistoryCard(
             booking: booking,
+            sortByMatchScore: _sortByMatchScore,
             onComplete: booking.isConfirmed 
                 ? () => _handleComplete(booking.id)
                 : null,
@@ -274,136 +313,197 @@ class _ProviderBookingsScreenState extends ConsumerState<ProviderBookingsScreen>
 
 enum BookingListType { pending, confirmed, completed, all }
 
-class _BookingRequestCard extends StatelessWidget {
+class _BookingRequestCard extends ConsumerWidget {
   final BookingModel booking;
+  final bool sortByMatchScore;
   final VoidCallback onAccept;
   final VoidCallback onReject;
 
   const _BookingRequestCard({
     required this.booking,
+    required this.sortByMatchScore,
     required this.onAccept,
     required this.onReject,
   });
 
   @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.pending_actions, color: Colors.orange[700]),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchScoreAsync = ref.watch(matchScoreProvider(booking.id));
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Booking #${booking.id.substring(0, 8)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                  child: Icon(Icons.pending_actions, color: Colors.orange[700]),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Booking #${booking.id.substring(0, 8)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        Text(
-                          'New booking request',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'PENDING',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange[900],
                       ),
-                    ),
+                      Text(
+                        'New booking request',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} at ${booking.scheduledAt.hour}:${booking.scheduledAt.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(color: Colors.grey[700]),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.account_balance_wallet, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'NPR ${booking.totalPrice.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                  child: Text(
+                    'PENDING',
+                    style: TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      color: Colors.orange[900],
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            // Match Score Badge
+            matchScoreAsync.when(
+              data: (matchScore) => Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: _MatchScoreBadge(
+                  matchScore: matchScore,
+                  onTap: () => _showMatchScoreBreakdown(context, matchScore),
+                ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onReject,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Reject'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                      ),
-                    ),
+              loading: () => Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: onAccept,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Accept'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Loading match score...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ],
-          ),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} at ${booking.scheduledAt.hour}:${booking.scheduledAt.minute.toString().padLeft(2, '0')}',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.account_balance_wallet, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  'NPR ${booking.totalPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onReject,
+                    icon: const Icon(Icons.close),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onAccept,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Accept'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
+
+  void _showMatchScoreBreakdown(BuildContext context, AIMatchScore matchScore) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _MatchScoreBreakdownSheet(matchScore: matchScore),
+    );
+  }
 }
 
-class _BookingHistoryCard extends StatelessWidget {
+class _BookingHistoryCard extends ConsumerWidget {
   final BookingModel booking;
+  final bool sortByMatchScore;
   final VoidCallback? onComplete;
 
   const _BookingHistoryCard({
     required this.booking,
+    required this.sortByMatchScore,
     this.onComplete,
   });
 
@@ -434,47 +534,550 @@ class _BookingHistoryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        elevation: 1,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: _getStatusColor().withOpacity(0.2),
-            child: Icon(_getStatusIcon(), color: _getStatusColor(), size: 20),
-          ),
-          title: Text(
-            'Booking #${booking.id.substring(0, 8)}',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          subtitle: Text(
-            '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} • NPR ${booking.totalPrice.toStringAsFixed(0)}',
-          ),
-          trailing: onComplete != null
-              ? FilledButton.icon(
-                  onPressed: onComplete,
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text('Complete'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                )
-              : Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _getStatusColor().withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    booking.status.name.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: _getStatusColor(),
-                    ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchScoreAsync = ref.watch(matchScoreProvider(booking.id));
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: _getStatusColor().withValues(alpha: 0.2),
+          child: Icon(_getStatusIcon(), color: _getStatusColor(), size: 20),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Booking #${booking.id.substring(0, 8)}',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+            // Match Score Badge for confirmed bookings
+            if (booking.isConfirmed)
+              matchScoreAsync.when(
+                data: (matchScore) => _MatchScoreBadge(
+                  matchScore: matchScore,
+                  compact: true,
+                  onTap: () => _showMatchScoreBreakdown(context, matchScore),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+          ],
+        ),
+        subtitle: Text(
+          '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} • NPR ${booking.totalPrice.toStringAsFixed(0)}',
+        ),
+        trailing: onComplete != null
+            ? FilledButton.icon(
+                onPressed: onComplete,
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('Complete'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor().withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _getStatusColor().withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  booking.status.name.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(),
                   ),
                 ),
+              ),
+      ),
+    );
+  }
+
+  void _showMatchScoreBreakdown(BuildContext context, AIMatchScore matchScore) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _MatchScoreBreakdownSheet(matchScore: matchScore),
+    );
+  }
+}
+
+
+// Sorted Booking List Widget
+class _SortedBookingList extends ConsumerWidget {
+  final List<BookingModel> bookings;
+  final BookingListType type;
+  final Function(String) onAccept;
+  final Function(String) onReject;
+  final Function(String) onComplete;
+
+  const _SortedBookingList({
+    required this.bookings,
+    required this.type,
+    required this.onAccept,
+    required this.onReject,
+    required this.onComplete,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Fetch all match scores
+    final matchScoresAsync = bookings.map((b) => 
+      ref.watch(matchScoreProvider(b.id))
+    ).toList();
+
+    // Check if all scores are loaded
+    bool allLoaded = true;
+    List<MapEntry<BookingModel, double>> bookingScores = [];
+
+    for (int i = 0; i < bookings.length; i++) {
+      final scoreAsync = matchScoresAsync[i];
+      scoreAsync.when(
+        data: (matchScore) {
+          bookingScores.add(MapEntry(bookings[i], matchScore.matchScore));
+        },
+        loading: () {
+          allLoaded = false;
+        },
+        error: (_, __) {
+          // If error, add with score 0 so it appears at the bottom
+          bookingScores.add(MapEntry(bookings[i], 0.0));
+        },
+      );
+    }
+
+    // If still loading, show loading indicator
+    if (!allLoaded) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Loading match scores...',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
         ),
       );
+    }
+
+    // Sort by match score (highest first)
+    bookingScores.sort((a, b) => b.value.compareTo(a.value));
+    final sortedBookings = bookingScores.map((e) => e.key).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: sortedBookings.length,
+      itemBuilder: (context, index) {
+        final booking = sortedBookings[index];
+        if (booking.isPending) {
+          return _BookingRequestCard(
+            booking: booking,
+            sortByMatchScore: true,
+            onAccept: () => onAccept(booking.id),
+            onReject: () => onReject(booking.id),
+          );
+        } else {
+          return _BookingHistoryCard(
+            booking: booking,
+            sortByMatchScore: true,
+            onComplete: booking.isConfirmed 
+                ? () => onComplete(booking.id)
+                : null,
+          );
+        }
+      },
+    );
+  }
+}
+
+// Match Score Provider
+final matchScoreProvider = FutureProvider.family<AIMatchScore, String>((ref, bookingId) async {
+  final aiService = ref.watch(aiApiServiceProvider);
+  return await aiService.getMatchScore(bookingId);
+});
+
+// Match Score Badge Widget
+class _MatchScoreBadge extends StatelessWidget {
+  final AIMatchScore matchScore;
+  final bool compact;
+  final VoidCallback onTap;
+
+  const _MatchScoreBadge({
+    required this.matchScore,
+    this.compact = false,
+    required this.onTap,
+  });
+
+  Color _getScoreColor() {
+    final score = matchScore.matchScore;
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return Colors.red;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getScoreColor();
+    final score = matchScore.matchScore.toStringAsFixed(0);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 4 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.stars,
+              size: compact ? 14 : 16,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$score% Match',
+              style: TextStyle(
+                fontSize: compact ? 11 : 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.info_outline,
+              size: compact ? 12 : 14,
+              color: color,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Match Score Breakdown Bottom Sheet
+class _MatchScoreBreakdownSheet extends StatelessWidget {
+  final AIMatchScore matchScore;
+
+  const _MatchScoreBreakdownSheet({required this.matchScore});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title
+              Row(
+                children: [
+                  Icon(
+                    Icons.analytics,
+                    size: 28,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Match Score Breakdown',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'AI-powered analysis of your compatibility with this booking',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Overall Score
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _getScoreColor().withValues(alpha: 0.1),
+                      _getScoreColor().withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _getScoreColor().withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: _getScoreColor(),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${matchScore.matchScore.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Overall Match Score',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getScoreLabel(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _getScoreColor(),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Factors
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    const Text(
+                      'Match Factors',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _FactorItem(
+                      icon: Icons.build,
+                      label: 'Skill Alignment',
+                      score: matchScore.factors.skillAlignment,
+                      description: 'How well your skills match the job requirements',
+                    ),
+                    _FactorItem(
+                      icon: Icons.location_on,
+                      label: 'Location Proximity',
+                      score: matchScore.factors.locationProximity,
+                      description: 'Distance from the service location',
+                    ),
+                    _FactorItem(
+                      icon: Icons.star,
+                      label: 'Rating',
+                      score: matchScore.factors.rating,
+                      description: 'Your historical performance and reviews',
+                    ),
+                    _FactorItem(
+                      icon: Icons.calendar_today,
+                      label: 'Availability',
+                      score: matchScore.factors.availability,
+                      description: 'Your schedule availability for this booking',
+                    ),
+                    _FactorItem(
+                      icon: Icons.favorite,
+                      label: 'Preferences',
+                      score: matchScore.factors.preferences,
+                      description: 'Match with customer stated preferences',
+                    ),
+                    const SizedBox(height: 24),
+                    // AI Reasoning
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.lightbulb_outline,
+                                size: 20,
+                                color: Colors.blue[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'AI Insights',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            matchScore.reasoning,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getScoreColor() {
+    final score = matchScore.matchScore;
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getScoreLabel() {
+    final score = matchScore.matchScore;
+    if (score >= 80) return 'Excellent Match';
+    if (score >= 60) return 'Good Match';
+    return 'Fair Match';
+  }
+}
+
+// Factor Item Widget
+class _FactorItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double score;
+  final String description;
+
+  const _FactorItem({
+    required this.icon,
+    required this.label,
+    required this.score,
+    required this.description,
+  });
+
+  Color _getScoreColor() {
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return Colors.red;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: Colors.grey[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '${score.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: _getScoreColor(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: score / 100,
+              minHeight: 8,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(_getScoreColor()),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

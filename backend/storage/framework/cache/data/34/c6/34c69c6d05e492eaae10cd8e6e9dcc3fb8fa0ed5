@@ -1,0 +1,1 @@
+1779727839a:4:{s:7:"content";s:5:"Hello";s:8:"metadata";a:6:{s:5:"model";s:10:"qwen2.5:3b";s:8:"duration";d:16.430583953857422;s:14:"total_duration";i:16372314139;s:13:"load_duration";i:786037034;s:17:"prompt_eval_count";i:35;s:10:"eval_count";i:2;}s:7:"success";b:1;s:5:"error";N;}

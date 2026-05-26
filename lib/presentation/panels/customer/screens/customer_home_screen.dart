@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/route_constants.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../../data/repositories/service_repository.dart';
+import '../../../../services/ai/ai_api_service.dart';
+import '../../../../services/ai/models/ai_recommendation.dart';
+import '../../../../services/api/api_exception.dart';
 import '../widgets/service_card.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -14,6 +17,13 @@ final servicesProvider = FutureProvider<List<ServiceModel>>((ref) async {
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
+
+// AI Recommendations provider
+final aiRecommendationsProvider =
+    FutureProvider.autoDispose<List<AIRecommendation>>((ref) async {
+  final aiService = ref.watch(aiApiServiceProvider);
+  return aiService.getRecommendations(limit: 5, refresh: false);
+});
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -73,11 +83,15 @@ class CustomerHomeScreen extends ConsumerWidget {
             ),
 
             // ── AI Recommendations ───────────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(title: 'Recommended for You'),
-            ),
             SliverToBoxAdapter(
-              child: _RecommendationsRow(),
+              child: _SectionHeader(
+                title: 'Recommended for You',
+                actionLabel: 'Refresh',
+                onAction: () => ref.refresh(aiRecommendationsProvider),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: _AIRecommendationsSection(),
             ),
 
             // ── All Services ─────────────────────────────────────
@@ -215,88 +229,278 @@ class _CategoryFilter extends StatelessWidget {
   }
 }
 
-class _RecommendationsRow extends StatelessWidget {
+class _AIRecommendationsSection extends ConsumerWidget {
+  const _AIRecommendationsSection();
+
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 3,
-        itemBuilder: (context, index) => Card(
-          margin: const EdgeInsets.only(right: 12),
-          child: SizedBox(
-            width: 160,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.auto_awesome, color: Colors.amber),
-                  const SizedBox(height: 8),
-                  Text('Recommended ${index + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Text('AI suggested', style: TextStyle(fontSize: 12)),
-                ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recommendationsAsync = ref.watch(aiRecommendationsProvider);
+
+    return recommendationsAsync.when(
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) {
+        // Handle error gracefully
+        String errorMessage = 'Unable to load recommendations';
+        if (error is ApiException) {
+          errorMessage = error.message;
+        }
+        
+        return Container(
+          height: 200,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: Card(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () => ref.refresh(aiRecommendationsProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Try Again'),
+                    ),
+                  ],
+                ),
               ),
             ),
+          ),
+        );
+      },
+      data: (recommendations) {
+        if (recommendations.isEmpty) {
+          return Container(
+            height: 200,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome_outlined,
+                          size: 48, color: Colors.grey.shade400),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No recommendations yet',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Book a service to get personalized recommendations',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SizedBox(
+          height: 220,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: recommendations.length,
+            itemBuilder: (context, index) {
+              final recommendation = recommendations[index];
+              return _RecommendationCard(
+                recommendation: recommendation,
+                onTap: () async {
+                  // Record feedback when user taps
+                  final aiService = ref.read(aiApiServiceProvider);
+                  try {
+                    await aiService.recordRecommendationFeedback(
+                      recommendationId: recommendation.id,
+                      action: 'clicked',
+                    );
+                  } catch (e) {
+                    // Silently fail - don't block navigation
+                    debugPrint('Failed to record feedback: $e');
+                  }
+
+                  // Navigate to service detail
+                  if (context.mounted) {
+                    context.push(
+                      RouteConstants.customerServiceDetail
+                          .replaceAll(':id', recommendation.service.id),
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  final AIRecommendation recommendation;
+  final VoidCallback onTap;
+
+  const _RecommendationCard({
+    required this.recommendation,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final service = recommendation.service;
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.only(right: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 280,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Service image or placeholder
+              Container(
+                height: 100,
+                color: Colors.blue.shade50,
+                child: service.imageUrl != null
+                    ? Image.network(
+                        service.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholderIcon(),
+                      )
+                    : _buildPlaceholderIcon(),
+              ),
+
+              // Service details
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // AI badge and confidence score
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.auto_awesome,
+                                    size: 12, color: Colors.amber.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${recommendation.confidenceScore.toStringAsFixed(0)}% match',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            service.category,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Service name
+                      Text(
+                        service.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Price
+                      Text(
+                        'NPR ${service.price.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // AI reasoning
+                      Expanded(
+                        child: Text(
+                          recommendation.reasoning,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-class _ServiceCard extends StatelessWidget {
-  final ServiceModel service;
-  final VoidCallback onTap;
-
-  const _ServiceCard({required this.service, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                color: Colors.blue.shade50,
-                child: const Center(
-                  child: Icon(Icons.home_repair_service,
-                      size: 48, color: Colors.blue),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(service.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  Text('${service.currency} ${service.price.toStringAsFixed(0)}',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary)),
-                  Text('${service.durationMinutes} min',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ],
-              ),
-            ),
-          ],
-        ),
+  Widget _buildPlaceholderIcon() {
+    return const Center(
+      child: Icon(
+        Icons.home_repair_service,
+        size: 48,
+        color: Colors.blue,
       ),
     );
   }
 }
-
-// ── AI Problem Solver Card ────────────────────────────────────────────────────
 
 class _AIProblemSolverCard extends StatelessWidget {
   final VoidCallback onTap;
