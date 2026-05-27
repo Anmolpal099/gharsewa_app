@@ -256,13 +256,18 @@ class CustomerController extends BaseController
                 return $this->error('User not authenticated', 401);
             }
 
+            // Generate full URL for profile image if exists
+            $profileImageUrl = $user->profile_image_url 
+                ? url(Storage::url($user->profile_image_url))
+                : null;
+
             $profileData = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
-                'profile_image_url' => $user->profile_image_url,
+                'profile_image_url' => $profileImageUrl,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
@@ -333,13 +338,18 @@ class CustomerController extends BaseController
             // Refresh user data
             $user->refresh();
 
+            // Generate full URL for profile image if exists
+            $profileImageUrl = $user->profile_image_url 
+                ? url(Storage::url($user->profile_image_url))
+                : null;
+
             $profileData = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
-                'profile_image_url' => $user->profile_image_url,
+                'profile_image_url' => $profileImageUrl,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
@@ -376,9 +386,9 @@ class CustomerController extends BaseController
                 return $this->error('User not authenticated', 401);
             }
 
-            // Validate image
+            // Validate image - accept base64 or file upload
             $validator = Validator::make($request->all(), [
-                'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+                'image' => ['required', new \App\Rules\Base64Image(51200)], // Max 50MB
             ]);
 
             if ($validator->fails()) {
@@ -400,18 +410,31 @@ class CustomerController extends BaseController
                 }
             }
 
-            // Store new image
-            $image = $request->file('image');
-            $filename = time() . '_' . $user->id . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('profile-images', $filename, 'public');
+            // Handle base64 image
+            $base64Image = $request->input('image');
+            
+            // Remove data URI scheme if present
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
+                $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
+            }
+            
+            // Decode base64
+            $imageData = base64_decode($base64Image);
+            
+            // Generate filename
+            $filename = time() . '_' . $user->id . '.jpg';
+            $path = 'profile-images/' . $filename;
+            
+            // Store image
+            Storage::disk('public')->put($path, $imageData);
 
             // Update user's profile_image_url
             $user->update([
                 'profile_image_url' => $path,
             ]);
 
-            // Generate full URL
-            $imageUrl = Storage::url($path);
+            // Generate full URL with domain
+            $imageUrl = url(Storage::url($path));
 
             Log::info('Profile image uploaded', [
                 'user_id' => $user->id,
@@ -421,6 +444,7 @@ class CustomerController extends BaseController
 
             return $this->success([
                 'image_url' => $imageUrl,
+                'url' => $imageUrl,
                 'path' => $path,
             ], 'Profile image uploaded successfully');
 

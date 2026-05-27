@@ -55,9 +55,9 @@ class ApiClient {
   }
 
   /// DELETE request with automatic error handling
-  Future<Response> delete(String path) async {
+  Future<Response> delete(String path, {Map<String, dynamic>? params}) async {
     try {
-      return await _dio.delete(path);
+      return await _dio.delete(path, queryParameters: params);
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

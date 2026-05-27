@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/json_helpers.dart';
+import '../../../core/models/platform_image.dart';
 import '../data/models/models.dart';
 import '../data/services/cache_manager.dart';
 import '../data/services/provider_api_service.dart';
@@ -118,20 +119,20 @@ class ProfileManager extends StateNotifier<AsyncValue<ProviderProfile>> {
   }
 
   Future<void> updateProfilePhoto(
-    File file, {
+    PlatformImage image, {
     void Function(double progress)? onProgress,
   }) async {
-    await _uploads.uploadProfilePhoto(file, onProgress: onProgress);
+    await _uploads.uploadProfilePhoto(image, onProgress: onProgress);
     await fetchProfile(forceRefresh: true);
   }
 
   Future<Certification> uploadCertification(
-    File file,
+    PlatformImage image,
     String name, {
     void Function(double progress)? onProgress,
   }) async {
     final cert = await _uploads.uploadCertification(
-      file,
+      image,
       name,
       onProgress: onProgress,
     );

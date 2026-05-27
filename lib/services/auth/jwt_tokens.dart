@@ -49,6 +49,7 @@ class JwtUser {
   final String role;
   final List<String> roles;
   final String? phoneNumber;
+  final String? profileImageUrl;
   final DateTime? emailVerifiedAt;
 
   const JwtUser({
@@ -58,6 +59,7 @@ class JwtUser {
     required this.role,
     required this.roles,
     this.phoneNumber,
+    this.profileImageUrl,
     this.emailVerifiedAt,
   });
 
@@ -77,6 +79,7 @@ class JwtUser {
       role: json['role'] as String,
       roles: rolesList,
       phoneNumber: json['phone_number'] as String?,
+      profileImageUrl: json['profile_image_url'] as String?,
       emailVerifiedAt: json['email_verified_at'] != null
           ? DateTime.parse(json['email_verified_at'] as String)
           : null,
@@ -91,6 +94,7 @@ class JwtUser {
       'role': role,
       'roles': roles,
       'phone_number': phoneNumber,
+      'profile_image_url': profileImageUrl,
       'email_verified_at': emailVerifiedAt?.toIso8601String(),
     };
   }

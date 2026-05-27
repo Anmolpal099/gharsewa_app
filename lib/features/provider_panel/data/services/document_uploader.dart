@@ -261,7 +261,7 @@ class DocumentUploader {
 
   /// Validate and upload a profile photo
   /// 
-  /// Validates file type (JPG/PNG), size (<5MB), compresses the image,
+  /// Accepts all image formats and sizes, compresses the image if needed,
   /// and uploads it to the specified endpoint.
   /// 
   /// Parameters:
@@ -271,44 +271,39 @@ class DocumentUploader {
   /// 
   /// Returns: The uploaded file URL
   /// 
-  /// Throws: [DocumentUploadException] on validation or upload failure
+  /// Throws: [DocumentUploadException] on upload failure
   Future<String> uploadProfilePhoto(
     File imageFile,
     String endpoint, {
     Function(double)? onProgress,
   }) async {
-    // Validate file type (JPG or PNG)
-    if (!validateFileType(imageFile, ['jpg', 'jpeg', 'png'])) {
-      throw DocumentUploadException(
-        'File must be JPG or PNG format',
-        type: DocumentUploadExceptionType.validation,
-      );
+    // No validation - accept all formats and sizes
+    
+    // Compress image if it's an image file
+    File fileToUpload = imageFile;
+    final extension = path.extension(imageFile.path).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.heic', '.webp', '.bmp', '.gif'].contains(extension)) {
+      try {
+        fileToUpload = await compressImage(imageFile);
+      } catch (e) {
+        // If compression fails, use original file
+        debugPrint('Image compression failed, using original: $e');
+        fileToUpload = imageFile;
+      }
     }
-
-    // Validate file size (<5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (!await validateFileSize(imageFile, maxSize)) {
-      throw DocumentUploadException(
-        'File size must be under 5MB',
-        type: DocumentUploadExceptionType.validation,
-      );
-    }
-
-    // Compress image
-    final compressedFile = await compressImage(imageFile);
 
     try {
-      // Upload compressed image
+      // Upload image
       return await uploadFile(
-        compressedFile,
+        fileToUpload,
         endpoint,
         onProgress: onProgress,
       );
     } finally {
       // Clean up compressed file if it's different from original
-      if (compressedFile.path != imageFile.path) {
+      if (fileToUpload.path != imageFile.path) {
         try {
-          await compressedFile.delete();
+          await fileToUpload.delete();
         } catch (e) {
           debugPrint('Failed to delete compressed file: $e');
         }
@@ -318,7 +313,7 @@ class DocumentUploader {
 
   /// Validate and upload a certification document
   /// 
-  /// Validates file type (PDF/PNG/JPG) and size (<10MB), compresses images,
+  /// Accepts all file formats and sizes, compresses images if needed,
   /// and uploads the document to the specified endpoint.
   /// 
   /// Parameters:
@@ -329,36 +324,27 @@ class DocumentUploader {
   /// 
   /// Returns: The uploaded file URL
   /// 
-  /// Throws: [DocumentUploadException] on validation or upload failure
+  /// Throws: [DocumentUploadException] on upload failure
   Future<String> uploadCertification(
     File documentFile,
     String endpoint, {
     required String certificationName,
     Function(double)? onProgress,
   }) async {
-    // Validate file type (PDF, PNG, or JPG)
-    if (!validateFileType(documentFile, ['pdf', 'png', 'jpg', 'jpeg'])) {
-      throw DocumentUploadException(
-        'File must be PDF, PNG, or JPG format',
-        type: DocumentUploadExceptionType.validation,
-      );
-    }
-
-    // Validate file size (<10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (!await validateFileSize(documentFile, maxSize)) {
-      throw DocumentUploadException(
-        'File size must be under 10MB',
-        type: DocumentUploadExceptionType.validation,
-      );
-    }
+    // No validation - accept all formats and sizes
 
     File fileToUpload = documentFile;
 
     // Compress if it's an image
     final extension = path.extension(documentFile.path).toLowerCase();
-    if (['.png', '.jpg', '.jpeg'].contains(extension)) {
-      fileToUpload = await compressImage(documentFile);
+    if (['.png', '.jpg', '.jpeg', '.heic', '.webp', '.bmp', '.gif'].contains(extension)) {
+      try {
+        fileToUpload = await compressImage(documentFile);
+      } catch (e) {
+        // If compression fails, use original file
+        debugPrint('Image compression failed, using original: $e');
+        fileToUpload = documentFile;
+      }
     }
 
     try {

@@ -5,6 +5,7 @@ use App\Http\Controllers\API\V1\Auth\JwtAuthController;
 use App\Http\Controllers\API\V1\Auth\OtpController;
 use App\Http\Controllers\API\V1\Customer\CustomerController;
 use App\Http\Controllers\API\V1\Customer\BookingController as CustomerBookingController;
+use App\Http\Controllers\API\V1\Customer\AIConsultationController;
 use App\Http\Controllers\API\V1\Provider\ProviderController;
 use App\Http\Controllers\API\V1\Provider\BookingController as ProviderBookingController;
 use App\Http\Controllers\API\V1\Provider\ServiceController;
@@ -96,6 +97,14 @@ Route::prefix('v1')->group(function () {
                 Route::post('recommendations/feedback', [RecommendationController::class, 'feedback']);
                 Route::get('recommendations/stats', [RecommendationController::class, 'stats']);
                 Route::get('providers/matches', [MatchingController::class, 'findMatches']);
+                
+                // AI Visual Assistant Consultations (Rate limited: 10 requests per minute)
+                Route::middleware('throttle:10,1')->group(function () {
+                    Route::get('consultations', [AIConsultationController::class, 'index'])->name('ai.consultations.index');
+                    Route::post('consultations', [AIConsultationController::class, 'store'])->name('ai.consultations.store');
+                    Route::get('consultations/{id}', [AIConsultationController::class, 'show'])->name('ai.consultations.show');
+                    Route::delete('consultations/{id}', [AIConsultationController::class, 'destroy'])->name('ai.consultations.destroy');
+                });
             });
         });
 
@@ -103,6 +112,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:serviceProvider')->prefix('provider')->group(function () {
             Route::get('profile', [ProviderController::class, 'getProfile']);
             Route::put('profile', [ProviderController::class, 'updateProfile']);
+            Route::post('profile/image', [ProviderController::class, 'uploadProfileImage']);
             Route::get('dashboard', [ProviderController::class, 'getDashboard']);
             Route::get('earnings', [ProviderController::class, 'getEarnings']);
             Route::get('metrics', [ProviderController::class, 'getMetrics']);

@@ -47,6 +47,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ->onFailure(function () {
                 \Illuminate\Support\Facades\Log::error('AI analytics generation failed');
             });
+
+        // ── AI Consultations Cleanup ───────────────────────────────
+        // Clean up consultations older than 12 months daily at 2 AM
+        $schedule->command('consultations:cleanup')
+            ->daily()
+            ->at('02:00')
+            ->timezone('UTC')
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('Old AI consultations cleaned up successfully');
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('AI consultations cleanup failed');
+            });
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Return JSON for all API exceptions

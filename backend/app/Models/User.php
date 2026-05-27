@@ -179,6 +179,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Get AI consultations for this user (if customer)
+     */
+    public function aiConsultations()
+    {
+        return $this->hasMany(AIConsultation::class, 'customer_id');
+    }
+
+    /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
      * @return mixed

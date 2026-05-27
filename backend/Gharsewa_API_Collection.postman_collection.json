@@ -1,0 +1,958 @@
+{
+	"info": {
+		"_postman_id": "gharsewa-api-v1",
+		"name": "Gharsewa API - Phase 1",
+		"description": "Complete API collection for Gharsewa Phase 1 Backend APIs including Customer, Provider, and Admin endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customer_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "provider_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('access_token', jsonData.data.access_token);",
+									"    pm.test('Registration successful', function () {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234\",\n  \"password_confirmation\": \"Test1234\",\n  \"role\": \"customer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/jwt/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "jwt", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('access_token', jsonData.data.access_token);",
+									"    pm.test('Login successful', function () {",
+									"        pm.expect(jsonData.success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/jwt/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "jwt", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/jwt/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "jwt", "me"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/jwt/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "jwt", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Public Services",
+			"item": [
+				{
+					"name": "List All Services",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/services?page=1&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["services"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								},
+								{
+									"key": "category",
+									"value": "Cleaning",
+									"disabled": true
+								},
+								{
+									"key": "min_price",
+									"value": "1000",
+									"disabled": true
+								},
+								{
+									"key": "max_price",
+									"value": "3000",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Service Details",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/services/:id",
+							"host": ["{{base_url}}"],
+							"path": ["services", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "service-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Categories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/services/categories",
+							"host": ["{{base_url}}"],
+							"path": ["services", "categories"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": ["{{base_url}}"],
+							"path": ["profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Name\",\n  \"phone_number\": \"+977-9841234567\",\n  \"address\": \"Kathmandu, Nepal\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": ["{{base_url}}"],
+							"path": ["profile"]
+						}
+					}
+				},
+				{
+					"name": "Upload Profile Image",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/profile/image",
+							"host": ["{{base_url}}"],
+							"path": ["profile", "image"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Customer",
+			"item": [
+				{
+					"name": "List My Bookings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/customer/bookings?status=pending",
+							"host": ["{{base_url}}"],
+							"path": ["customer", "bookings"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"service_id\": \"service-uuid-here\",\n  \"scheduled_at\": \"2026-06-01 10:00:00\",\n  \"notes\": \"Please bring cleaning supplies\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/customer/bookings",
+							"host": ["{{base_url}}"],
+							"path": ["customer", "bookings"]
+						}
+					}
+				},
+				{
+					"name": "Get Booking Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/customer/bookings/:id",
+							"host": ["{{base_url}}"],
+							"path": ["customer", "bookings", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cancellation_reason\": \"Found another service provider\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/customer/bookings/:id/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["customer", "bookings", ":id", "cancel"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Provider",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Get Earnings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/earnings?group_by=day",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "earnings"],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2026-05-01",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "2026-05-31",
+									"disabled": true
+								},
+								{
+									"key": "group_by",
+									"value": "day"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "List My Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/services",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "services"],
+							"query": [
+								{
+									"key": "status",
+									"value": "active",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Service",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"House Cleaning Service\",\n  \"description\": \"Professional house cleaning with experienced staff\",\n  \"category\": \"Cleaning\",\n  \"price\": 1500,\n  \"duration_minutes\": 120,\n  \"currency\": \"NPR\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/provider/services",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "services"]
+						}
+					}
+				},
+				{
+					"name": "Update Service",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Service Name\",\n  \"price\": 1800\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/provider/services/:id",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "services", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "service-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Service",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/services/:id",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "services", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "service-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Service Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"inactive\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/provider/services/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "services", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "service-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "List Provider Bookings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Pending Bookings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/pending",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", "pending"]
+						}
+					}
+				},
+				{
+					"name": "Get Booking Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/:id",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Accept Booking",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/:id/accept",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", ":id", "accept"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Reject Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rejection_reason\": \"Not available on that date\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/:id/reject",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", ":id", "reject"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Complete Booking",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/:id/complete",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", ":id", "complete"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Booking Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/provider/bookings/stats",
+							"host": ["{{base_url}}"],
+							"path": ["provider", "bookings", "stats"],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2026-05-01",
+									"disabled": true
+								},
+								{
+									"key": "date_to",
+									"value": "2026-05-31",
+									"disabled": true
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/analytics",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "analytics"]
+						}
+					}
+				},
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users"],
+							"query": [
+								{
+									"key": "search",
+									"value": "john",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "customer",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "active",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Activate User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/:id/activate",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", ":id", "activate"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deactivate User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Violation of terms of service\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users/:id/deactivate",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", ":id", "deactivate"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Reset User Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/:id/password-reset",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", ":id", "password-reset"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/:id?reason=Account closure requested",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", ":id"],
+							"query": [
+								{
+									"key": "reason",
+									"value": "Account closure requested"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "List Bookings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/bookings",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "bookings"],
+							"query": [
+								{
+									"key": "search",
+									"value": "john",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "pending",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Service provider unavailable\",\n  \"refund\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/bookings/:id/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "bookings", ":id", "cancel"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Booking Note",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"note\": \"Customer requested rescheduling\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/bookings/:id/note",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "bookings", ":id", "note"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "booking-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/reports?type=bookings&format=json&start_date=2026-05-01&end_date=2026-05-31",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "reports"],
+							"query": [
+								{
+									"key": "type",
+									"value": "bookings"
+								},
+								{
+									"key": "format",
+									"value": "json"
+								},
+								{
+									"key": "start_date",
+									"value": "2026-05-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2026-05-31"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

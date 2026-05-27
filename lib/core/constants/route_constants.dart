@@ -15,6 +15,11 @@ class RouteConstants {
   static const String customerBookings = '/customer/bookings';
   static const String customerProfile = '/customer/profile';
   static const String customerAIAssistant = '/customer/ai-assistant';
+  static const String customerAIImageCapture = '/customer/ai-assistant/capture';
+  static const String customerAIAnnotation = '/customer/ai-assistant/annotate';
+  static const String customerAIResults = '/customer/ai-assistant/results';
+  static const String customerAIHistory = '/customer/ai-assistant/history';
+  static const String customerAIConsultationDetail = '/customer/ai-assistant/consultations/:id';
 
   // Provider
   static const String providerDashboard = '/provider/dashboard';

@@ -31,7 +31,7 @@ class AIServiceTest extends TestCase
         Config::set('services.ollama.timeout', 60);
         Config::set('services.ollama.max_tokens', 2048);
         Config::set('services.ollama.temperature', 0.7);
-        Config::set('services.ollama.top_p', 0.9');
+        Config::set('services.ollama.top_p', 0.9);
         Config::set('services.ollama.max_retries', 3);
         Config::set('services.ollama.retry_delay', 1000);
         Config::set('services.ollama.cache_ttl', 3600);

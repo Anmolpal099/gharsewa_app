@@ -1,0 +1,52 @@
+﻿{
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "type":  "string",
+                         "value":  "http://localhost:8000/api/v1"
+                     },
+                     {
+                         "key":  "access_token",
+                         "type":  "string",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "provider_token",
+                         "type":  "string",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "customer_token",
+                         "type":  "string",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "service_id",
+                         "type":  "string",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "booking_id",
+                         "type":  "string",
+                         "value":  ""
+                     }
+                 ],
+    "info":  {
+                 "description":  "Complete API collection for Gharsewa Phase 1 Backend APIs",
+                 "name":  "Phase 1 Backend APIs - Gharsewa",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+
+             ],
+    "auth":  {
+                 "bearer":  [
+                                {
+                                    "key":  "token",
+                                    "type":  "string",
+                                    "value":  "{{access_token}}"
+                                }
+                            ],
+                 "type":  "bearer"
+             }
+}

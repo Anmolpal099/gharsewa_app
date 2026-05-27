@@ -17,6 +17,11 @@ import '../panels/customer/screens/booking_detail_screen.dart';
 import '../panels/customer/screens/customer_profile_screen.dart';
 import '../panels/customer/screens/edit_profile_screen.dart';
 import '../panels/customer/screens/ai_assistant_screen.dart';
+import '../panels/customer/ai_consultation/screens/ai_assistant_home_screen.dart';
+import '../panels/customer/ai_consultation/screens/image_capture_screen.dart';
+import '../panels/customer/ai_consultation/screens/annotation_editor_screen.dart';
+import '../panels/customer/ai_consultation/screens/analysis_results_screen.dart';
+import '../panels/customer/ai_consultation/screens/consultation_history_screen.dart';
 import '../../features/provider_panel/presentation/provider_panel_root.dart';
 import '../../features/provider_panel/presentation/screens/modern_dashboard_screen.dart';
 import '../../features/provider_panel/presentation/screens/provider_profile_screen.dart';
@@ -199,7 +204,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── AI Assistant (Full Screen - Outside Shell) ──────────────
       GoRoute(
         path: RouteConstants.customerAIAssistant,
-        builder: (context, state) => const AIAssistantScreen(),
+        builder: (context, state) => const AIAssistantHomeScreen(),
+      ),
+      
+      // ── AI Consultation Routes ──────────────────────────────────
+      GoRoute(
+        path: RouteConstants.customerAIImageCapture,
+        builder: (context, state) => const ImageCaptureScreen(),
+      ),
+      GoRoute(
+        path: RouteConstants.customerAIAnnotation,
+        builder: (context, state) {
+          // Get image file from state provider
+          // The image should be set in currentConsultationProvider before navigation
+          return const AnnotationEditorScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteConstants.customerAIResults,
+        builder: (context, state) => const AnalysisResultsScreen(),
+      ),
+      GoRoute(
+        path: RouteConstants.customerAIHistory,
+        builder: (context, state) => const ConsultationHistoryScreen(),
+      ),
+      GoRoute(
+        path: RouteConstants.customerAIConsultationDetail,
+        builder: (context, state) {
+          // TODO: Replace with ConsultationDetailScreen when implemented
+          return const AIAssistantScreen();
+        },
       ),
 
       // ── Provider Panel (Material 3 modernization) ───────────────

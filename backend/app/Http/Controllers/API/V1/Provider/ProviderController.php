@@ -32,13 +32,18 @@ class ProviderController extends BaseController
             // Get services count
             $servicesCount = Service::where('provider_id', $user->id)->count();
 
+            // Generate full URL for profile image if exists
+            $profileImageUrl = $user->profile_image_url 
+                ? url(Storage::url($user->profile_image_url))
+                : null;
+
             $profileData = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
-                'profile_image_url' => $user->profile_image_url,
+                'profile_image_url' => $profileImageUrl,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
@@ -130,13 +135,18 @@ class ProviderController extends BaseController
             // Get services count
             $servicesCount = Service::where('provider_id', $user->id)->count();
 
+            // Generate full URL for profile image if exists
+            $profileImageUrl = $user->profile_image_url 
+                ? url(Storage::url($user->profile_image_url))
+                : null;
+
             $profileData = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
                 'phone_number' => $user->phone_number,
-                'profile_image_url' => $user->profile_image_url,
+                'profile_image_url' => $profileImageUrl,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
@@ -396,18 +406,35 @@ class ProviderController extends BaseController
 
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
-                'document' => 'required|file|mimes:pdf,png,jpg,jpeg|max:10240',
+                'document' => ['required', new \App\Rules\Base64Image(51200)], // Max 50MB, base64
             ]);
 
             if ($validator->fails()) {
                 return $this->error('Validation failed', 422, $validator->errors());
             }
 
-            $file = $request->file('document');
-            $ext = strtolower($file->getClientOriginalExtension());
+            // Handle base64 image
+            $base64Image = $request->input('document');
+
+            // Remove data URI scheme if present
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
+                $ext = strtolower($matches[1]);
+                $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
+            } else {
+                // Default to jpg if no mime type detected
+                $ext = 'jpg';
+            }
+
+            // Decode base64
+            $imageData = base64_decode($base64Image);
+
+            // Generate filename
             $filename = time() . '_' . Str::uuid() . '.' . $ext;
-            $path = $file->storeAs('certifications/' . $user->id, $filename, 'public');
-            $documentUrl = Storage::disk('public')->url($path);
+            $path = 'certifications/' . $user->id . '/' . $filename;
+
+            // Store image
+            Storage::disk('public')->put($path, $imageData);
+            $documentUrl = url(Storage::disk('public')->url($path));
 
             $metadata = $user->metadata ?? [];
             $certifications = $metadata['certifications'] ?? [];
@@ -438,6 +465,90 @@ class ProviderController extends BaseController
             ]);
 
             return $this->error('Failed to upload certification. Please try again.', 500);
+        }
+    }
+
+    /**
+     * Upload profile image
+     * POST /api/v1/provider/profile/image
+     * Requires authentication with serviceProvider role
+     */
+    public function uploadProfileImage(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return $this->error('User not authenticated', 401);
+            }
+
+            // Validate image - accept base64
+            $validator = Validator::make($request->all(), [
+                'image' => ['required', new \App\Rules\Base64Image(51200)], // Max 50MB
+            ]);
+
+            if ($validator->fails()) {
+                return $this->error('Validation failed', 422, $validator->errors());
+            }
+
+            // Delete old image if exists
+            if ($user->profile_image_url) {
+                $oldPath = $user->profile_image_url;
+                
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                    Log::info('Old profile image deleted', [
+                        'user_id' => $user->id,
+                        'old_path' => $oldPath,
+                    ]);
+                }
+            }
+
+            // Handle base64 image
+            $base64Image = $request->input('image');
+            
+            // Remove data URI scheme if present
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
+                $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
+            }
+            
+            // Decode base64
+            $imageData = base64_decode($base64Image);
+            
+            // Generate filename
+            $filename = time() . '_' . $user->id . '.jpg';
+            $path = 'profile-images/' . $filename;
+            
+            // Store image
+            Storage::disk('public')->put($path, $imageData);
+
+            // Update user's profile_image_url
+            $user->update([
+                'profile_image_url' => $path,
+            ]);
+
+            // Generate full URL with domain
+            $imageUrl = url(Storage::url($path));
+
+            Log::info('Provider profile image uploaded', [
+                'user_id' => $user->id,
+                'path' => $path,
+                'url' => $imageUrl,
+            ]);
+
+            return $this->success([
+                'image_url' => $imageUrl,
+                'url' => $imageUrl,
+                'path' => $path,
+            ], 'Profile image uploaded successfully');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to upload provider profile image', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->error('Failed to upload profile image. Please try again.', 500);
         }
     }
 

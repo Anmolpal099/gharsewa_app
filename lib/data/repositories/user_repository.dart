@@ -1,6 +1,10 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../../services/api/api_client.dart';
+import '../../core/models/platform_image.dart';
+import '../../core/services/image_service.dart';
 
 final userRepositoryProvider = Provider<UserRepository>(
   (ref) => UserRepository(ref.read(apiClientProvider)),
@@ -9,6 +13,7 @@ final userRepositoryProvider = Provider<UserRepository>(
 class UserRepository {
   UserRepository(this._api);
   final ApiClient _api;
+  final ImageService _imageService = ImageService();
 
   /// Get current user profile
   Future<UserModel> getCurrentUser() async {
@@ -29,10 +34,54 @@ class UserRepository {
   }
 
   /// Upload profile image
-  Future<String> uploadProfileImage(String filePath) async {
-    // TODO: Implement multipart file upload
-    // For now, return placeholder
-    throw UnimplementedError('Profile image upload not yet implemented');
+  Future<String> uploadProfileImage(
+    PlatformImage image, {
+    void Function(double progress)? onProgress,
+  }) async {
+    try {
+      // Convert PlatformImage to base64 for API transmission
+      final base64String = await _imageService.imageToBase64(image);
+
+      // Create form data with base64 image
+      final formData = FormData.fromMap({
+        'image': base64String,
+      });
+
+      // Upload with progress tracking
+      final res = await _api.dio.post(
+        '/v1/profile/image',
+        data: formData,
+        onSendProgress: (sent, total) {
+          if (onProgress != null && total > 0) {
+            onProgress(sent / total);
+          }
+        },
+      );
+
+      // Extract image URL from response
+      final data = res.data;
+      if (data is Map<String, dynamic> && data['success'] == true) {
+        final imageUrl = data['data']['image_url'] ?? data['data']['url'];
+        if (imageUrl != null) {
+          return imageUrl as String;
+        }
+      }
+
+      throw Exception('Failed to upload profile image');
+    } on DioException catch (e) {
+      // Handle Dio-specific errors
+      if (e.response != null) {
+        final errorMessage = e.response?.data['message'] ?? 'Failed to upload profile image';
+        throw Exception('Failed to upload profile image: $errorMessage');
+      }
+      throw Exception('Failed to upload profile image: ${e.message}');
+    } catch (e) {
+      // Handle image conversion errors and other exceptions
+      if (e.toString().contains('Failed to convert image')) {
+        throw Exception('Failed to process image: ${e.toString()}');
+      }
+      throw Exception('Failed to upload profile image: ${e.toString()}');
+    }
   }
 
   /// Get all users (admin only)

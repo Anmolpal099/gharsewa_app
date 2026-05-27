@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../../core/services/image_service.dart';
+import '../../../../core/models/platform_image.dart';
+import '../../../../core/widgets/image_display_widget.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../services/auth/auth_service.dart';
 
@@ -15,7 +19,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _imageService = ImageService();
+  PlatformImage? _selectedImage;
   bool _isLoading = false;
+  bool _isUploadingImage = false;
+  double _uploadProgress = 0.0;
 
   @override
   void initState() {
@@ -111,6 +119,82 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _pickAndUploadProfileImage() async {
+    try {
+      // Use ImageService to select image (platform-aware)
+      final result = await _imageService.selectImage(
+        source: ImageSource.gallery,
+      );
+
+      // Handle cancellation
+      if (result.wasCancelled) {
+        return;
+      }
+
+      // Handle errors
+      if (result.hasError) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage ?? 'Failed to select image'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Store selected image in state
+      if (result.image != null) {
+        setState(() {
+          _selectedImage = result.image;
+          _isUploadingImage = true;
+          _uploadProgress = 0.0;
+        });
+
+        final userRepository = ref.read(userRepositoryProvider);
+
+        // Upload image directly using PlatformImage
+        await userRepository.uploadProfileImage(
+          result.image!,
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() => _uploadProgress = progress);
+            }
+          },
+        );
+
+        // Refresh auth state to get updated user data
+        ref.invalidate(authServiceProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile photo updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+          _uploadProgress = 0.0;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authServiceProvider);
@@ -166,18 +250,58 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   Center(
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 56,
-                          backgroundColor: Colors.blue.shade100,
-                          child: Text(
-                            user.name[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 48,
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        _isUploadingImage
+                            ? Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 56,
+                                    backgroundColor: Colors.blue.shade100,
+                                    child: _selectedImage != null
+                                        ? ClipOval(
+                                            child: ImageDisplayWidget(
+                                              image: _selectedImage!,
+                                              width: 112,
+                                              height: 112,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          )
+                                        : Text(
+                                            user.name[0].toUpperCase(),
+                                            style: const TextStyle(
+                                              fontSize: 48,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
+                                  SizedBox(
+                                    width: 112,
+                                    height: 112,
+                                    child: CircularProgressIndicator(
+                                      value: _uploadProgress,
+                                      strokeWidth: 4,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : CircleAvatar(
+                                radius: 56,
+                                backgroundColor: Colors.blue.shade100,
+                                backgroundImage: user.profileImageUrl != null
+                                    ? NetworkImage(user.profileImageUrl!)
+                                    : null,
+                                child: user.profileImageUrl == null
+                                    ? Text(
+                                        user.name[0].toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 48,
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : null,
+                              ),
                         Positioned(
                           bottom: 0,
                           right: 0,
@@ -190,15 +314,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             child: IconButton(
                               icon: const Icon(Icons.camera_alt,
                                   color: Colors.white, size: 20),
-                              onPressed: () {
-                                // TODO: Implement image picker
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Profile image upload coming soon!'),
-                                  ),
-                                );
-                              },
+                              onPressed: _isUploadingImage
+                                  ? null
+                                  : _pickAndUploadProfileImage,
                             ),
                           ),
                         ),

@@ -17,6 +17,8 @@ import '../utils/provider_accessibility.dart';
 import '../../../../core/utils/media_url.dart';
 import '../widgets/provider_async_widgets.dart';
 import '../widgets/provider_widgets.dart';
+import '../../../../core/services/image_service.dart';
+import '../../../../core/models/platform_image.dart';
 
 final profileSuggestionsProvider =
     FutureProvider<List<({String id, String title, String description})>>(
@@ -46,9 +48,10 @@ class ProviderProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
+  final ImageService _imageService = ImageService();
   double _uploadProgress = 0;
   bool _isUploading = false;
-  File? _pendingCertFile;
+  PlatformImage? _pendingCertImage;
   String? _pendingCertName;
 
   @override
@@ -224,7 +227,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (_pendingCertFile != null) ...[
+              if (_pendingCertImage != null) ...[
                 Card(
                   child: ListTile(
                     title: Text('Retry upload: $_pendingCertName'),
@@ -478,21 +481,35 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
   }
 
   Future<void> _pickProfilePhoto(BuildContext context) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
+    final result = await _imageService.selectImage(
       source: ImageSource.gallery,
-      maxWidth: 1920,
-      imageQuality: 85,
     );
-    if (image == null || !mounted) return;
+
+    if (!mounted) return;
+
+    if (result.wasCancelled) {
+      return;
+    }
+
+    if (result.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.errorMessage ?? 'Failed to select image')),
+      );
+      return;
+    }
+
+    if (result.image == null) {
+      return;
+    }
 
     setState(() {
       _isUploading = true;
       _uploadProgress = 0;
     });
+
     try {
       await ref.read(profileManagerProvider.notifier).updateProfilePhoto(
-            File(image.path),
+            result.image!,
             onProgress: (p) => setState(() => _uploadProgress = p),
           );
       if (mounted) {
@@ -534,12 +551,30 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
       ),
     );
     if (nameOk != true || !mounted) return;
-
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+    // AFTER (replace with):
+    final imageResult = await _imageService.selectImage(
+      source: ImageSource.gallery,
     );
-    if (result == null || result.files.single.path == null || !mounted) return;
+
+    if (!mounted) return;
+
+    if (imageResult.wasCancelled) {
+      return;
+    }
+
+    if (imageResult.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(imageResult.errorMessage ?? 'Failed to select image')),
+      );
+      return;
+    }
+
+    if (imageResult.image == null) {
+      return;
+    }
+
+    // Store the PlatformImage
+    final certImage = imageResult.image!;
 
     setState(() {
       _isUploading = true;
@@ -547,7 +582,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
     });
     try {
       await ref.read(profileManagerProvider.notifier).uploadCertification(
-            File(result.files.single.path!),
+            certImage,
             nameController.text.trim().isEmpty
                 ? 'Certification'
                 : nameController.text.trim(),
@@ -561,7 +596,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _pendingCertFile = File(result.files.single.path!);
+          _pendingCertImage = certImage;
           _pendingCertName = nameController.text.trim().isEmpty
               ? 'Certification'
               : nameController.text.trim();
@@ -581,18 +616,18 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
   }
 
   Future<void> _retryCertUpload(BuildContext context) async {
-    final file = _pendingCertFile;
+    final certImage = _pendingCertImage;
     final name = _pendingCertName;
-    if (file == null || name == null) return;
+    if (certImage == null || name == null) return;
     setState(() => _isUploading = true);
     try {
       await ref.read(profileManagerProvider.notifier).uploadCertification(
-            file,
+            certImage,
             name,
             onProgress: (p) => setState(() => _uploadProgress = p),
           );
       setState(() {
-        _pendingCertFile = null;
+        _pendingCertImage = null;
         _pendingCertName = null;
       });
       if (mounted) {
