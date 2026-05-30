@@ -21,6 +21,8 @@ class User extends Authenticatable implements JWTSubject
         'roles', // New: Support multiple roles
         'phone_number',
         'profile_image_url',
+        'profile_image_data', // NEW: Base64 image data
+        'profile_image_mime_type', // NEW: Image MIME type
         'is_active',
         'email_verified_at',
         'metadata',
@@ -41,6 +43,7 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'deleted_at',
+        'profile_image_data', // Hide base64 data from responses (use profile_image_url instead)
     ];
 
     /**

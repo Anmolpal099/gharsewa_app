@@ -146,6 +146,18 @@ class ProviderApiService {
     throw Exception(response.data['message'] ?? 'Failed to fetch metrics');
   }
 
+  /// GET /api/v1/provider/certifications/{id}
+  /// Fetch a specific certification with its document data
+  Future<Certification> getCertification(String certificationId) async {
+    final response = await _apiClient.get('/v1/provider/certifications/$certificationId');
+    if (response.data['success'] == true) {
+      return Certification.fromJson(
+        requireJsonMap(response.data['data'], field: 'data'),
+      );
+    }
+    throw Exception(response.data['message'] ?? 'Failed to fetch certification');
+  }
+
   ProviderProfile _profileFromApi(Map<String, dynamic> json) {
     final metadata = asJsonMap(json['metadata']);
     final skills = (metadata['skills'] as List<dynamic>?)

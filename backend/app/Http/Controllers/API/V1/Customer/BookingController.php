@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Service;
 use App\Jobs\AI\CalculateMatchScoresJob;
 use App\Services\Notification\NotificationService;
+use App\Events\BookingStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -264,6 +265,9 @@ class BookingController extends BaseController
                 );
             }
             
+            // Store old status for event
+            $oldStatus = $booking->status;
+            
             // Update status to cancelled
             $booking->status = 'cancelled';
             
@@ -273,6 +277,9 @@ class BookingController extends BaseController
             }
             
             $booking->save();
+            
+            // Dispatch BookingStatusChanged event
+            event(new BookingStatusChanged($booking, $oldStatus, 'cancelled'));
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);

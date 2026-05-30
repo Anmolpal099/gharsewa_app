@@ -9,11 +9,13 @@ use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\ApiRateLimitMiddleware;
 use App\Http\Middleware\LoginRateLimitMiddleware;
 use App\Http\Middleware\JwtMiddleware;
+use App\Http\Middleware\WebSocketAuthMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         api: __DIR__.'/../routes/api.php',
         apiPrefix: 'api',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
@@ -24,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // ── Route-level middleware aliases ─────────────────────────
         $middleware->alias([
             'jwt.auth'      => JwtMiddleware::class,
+            'ws.auth'       => WebSocketAuthMiddleware::class,
             'role'          => RoleMiddleware::class,
             'api.limit'     => ApiRateLimitMiddleware::class,
             'login.limit'   => LoginRateLimitMiddleware::class,

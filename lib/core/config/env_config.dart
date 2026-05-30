@@ -91,6 +91,22 @@ class EnvConfig {
     defaultValue: 'ap2',
   );
 
+  // WebSocket Configuration (Laravel Reverb)
+  static const String wsUrl = String.fromEnvironment(
+    'WS_URL',
+    defaultValue: 'ws://localhost:6001',
+  );
+
+  static const String reverbAppKey = String.fromEnvironment(
+    'REVERB_APP_KEY',
+    defaultValue: '',
+  );
+
+  static const bool useSecureWebSocket = bool.fromEnvironment(
+    'USE_SECURE_WEBSOCKET',
+    defaultValue: false,
+  );
+
   // App Configuration
   static const String appName = String.fromEnvironment(
     'APP_NAME',

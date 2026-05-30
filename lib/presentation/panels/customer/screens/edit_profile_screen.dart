@@ -7,6 +7,7 @@ import '../../../../core/models/platform_image.dart';
 import '../../../../core/widgets/image_display_widget.dart';
 import '../../../../data/repositories/user_repository.dart';
 import '../../../../services/auth/auth_service.dart';
+import '../../../../services/auth/jwt_auth_service.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -164,8 +165,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           },
         );
 
-        // Refresh auth state to get updated user data
-        ref.invalidate(authServiceProvider);
+        // Refresh user data from backend to get updated profile image
+        final authService = ref.read(jwtAuthServiceProvider);
+        await authService.refreshUserData();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

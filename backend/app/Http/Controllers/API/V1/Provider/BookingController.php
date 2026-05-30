@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1\Provider;
 use App\Http\Controllers\API\V1\BaseController;
 use App\Models\Booking;
 use App\Services\Notification\NotificationService;
+use App\Events\BookingStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -154,9 +155,15 @@ class BookingController extends BaseController
                 );
             }
             
+            // Store old status for event
+            $oldStatus = $booking->status;
+            
             // Update status to confirmed
             $booking->status = 'confirmed';
             $booking->save();
+            
+            // Dispatch BookingStatusChanged event
+            event(new BookingStatusChanged($booking, $oldStatus, 'confirmed'));
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
@@ -247,10 +254,16 @@ class BookingController extends BaseController
                 );
             }
             
+            // Store old status for event
+            $oldStatus = $booking->status;
+            
             // Update status to rejected and save reason
             $booking->status = 'rejected';
             $booking->cancellation_reason = $request->rejection_reason;
             $booking->save();
+            
+            // Dispatch BookingStatusChanged event
+            event(new BookingStatusChanged($booking, $oldStatus, 'rejected'));
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);
@@ -398,9 +411,15 @@ class BookingController extends BaseController
                 );
             }
             
+            // Store old status for event
+            $oldStatus = $booking->status;
+            
             // Update status to completed
             $booking->status = 'completed';
             $booking->save();
+            
+            // Dispatch BookingStatusChanged event
+            event(new BookingStatusChanged($booking, $oldStatus, 'completed'));
             
             // Load relationships
             $booking->load(['customer', 'service', 'provider']);

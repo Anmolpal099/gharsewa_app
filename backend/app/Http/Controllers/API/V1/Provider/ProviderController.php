@@ -32,10 +32,11 @@ class ProviderController extends BaseController
             // Get services count
             $servicesCount = Service::where('provider_id', $user->id)->count();
 
-            // Generate full URL for profile image if exists
-            $profileImageUrl = $user->profile_image_url 
-                ? url(Storage::url($user->profile_image_url))
-                : null;
+            // Get profile image URL (from database or filesystem)
+            $profileImageUrl = $this->getProfileImageUrl($user);
+
+            // Process certification URLs to ensure they're absolute
+            $metadata = $this->processCertificationUrls($user->metadata);
 
             $profileData = [
                 'id' => $user->id,
@@ -48,7 +49,7 @@ class ProviderController extends BaseController
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
                 'services_count' => $servicesCount,
-                'metadata' => $this->metadataForResponse($user->metadata),
+                'metadata' => $this->metadataForResponse($metadata),
             ];
 
             Log::info('Provider profile retrieved', [
@@ -135,10 +136,11 @@ class ProviderController extends BaseController
             // Get services count
             $servicesCount = Service::where('provider_id', $user->id)->count();
 
-            // Generate full URL for profile image if exists
-            $profileImageUrl = $user->profile_image_url 
-                ? url(Storage::url($user->profile_image_url))
-                : null;
+            // Get profile image URL (from database or filesystem)
+            $profileImageUrl = $this->getProfileImageUrl($user);
+
+            // Process certification URLs to ensure they're absolute
+            $metadata = $this->processCertificationUrls($user->metadata);
 
             $profileData = [
                 'id' => $user->id,
@@ -151,7 +153,7 @@ class ProviderController extends BaseController
                 'email_verified_at' => $user->email_verified_at,
                 'last_login_at' => $user->last_login_at,
                 'services_count' => $servicesCount,
-                'metadata' => $this->metadataForResponse($user->metadata),
+                'metadata' => $this->metadataForResponse($metadata),
             ];
 
             Log::info('Provider profile updated', [
@@ -416,32 +418,27 @@ class ProviderController extends BaseController
             // Handle base64 image
             $base64Image = $request->input('document');
 
-            // Remove data URI scheme if present
+            // Remove data URI scheme if present and extract mime type
+            $mimeType = 'image/jpeg'; // default
             if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
                 $ext = strtolower($matches[1]);
+                $mimeType = 'image/' . $ext;
                 $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
             } else {
                 // Default to jpg if no mime type detected
                 $ext = 'jpg';
             }
 
-            // Decode base64
-            $imageData = base64_decode($base64Image);
-
-            // Generate filename
-            $filename = time() . '_' . Str::uuid() . '.' . $ext;
-            $path = 'certifications/' . $user->id . '/' . $filename;
-
-            // Store image
-            Storage::disk('public')->put($path, $imageData);
-            $documentUrl = url(Storage::disk('public')->url($path));
-
+            // Store certificate data in metadata
             $metadata = $user->metadata ?? [];
             $certifications = $metadata['certifications'] ?? [];
+            $certId = (string) Str::uuid();
+            
             $certifications[] = [
-                'id' => (string) Str::uuid(),
+                'id' => $certId,
                 'name' => $request->name,
-                'document_url' => $documentUrl,
+                'document_data' => $base64Image,
+                'mime_type' => $mimeType,
                 'file_type' => strtoupper($ext === 'jpeg' ? 'JPG' : $ext),
                 'is_verified' => false,
                 'uploaded_at' => now()->toIso8601String(),
@@ -451,11 +448,20 @@ class ProviderController extends BaseController
             $user->update(['metadata' => $metadata]);
             $user->refresh();
 
-            $cert = end($certifications);
+            // Return certificate info WITHOUT base64 data (to avoid URI too long)
+            $cert = [
+                'id' => $certId,
+                'name' => $request->name,
+                'file_type' => strtoupper($ext === 'jpeg' ? 'JPG' : $ext),
+                'is_verified' => false,
+                'uploaded_at' => now()->toIso8601String(),
+                'verified_at' => null,
+            ];
 
-            Log::info('Certification uploaded', [
+            Log::info('Certification uploaded to database', [
                 'user_id' => $user->id,
-                'certification_id' => $cert['id'],
+                'certification_id' => $certId,
+                'mime_type' => $mimeType,
             ]);
 
             return $this->success($cert, 'Certification uploaded successfully');
@@ -482,73 +488,75 @@ class ProviderController extends BaseController
                 return $this->error('User not authenticated', 401);
             }
 
+            Log::info('Profile image upload started', [
+                'user_id' => $user->id,
+                'request_size' => strlen($request->input('image', '')),
+            ]);
+
             // Validate image - accept base64
             $validator = Validator::make($request->all(), [
                 'image' => ['required', new \App\Rules\Base64Image(51200)], // Max 50MB
             ]);
 
             if ($validator->fails()) {
+                Log::error('Profile image validation failed', [
+                    'errors' => $validator->errors()->toArray(),
+                ]);
                 return $this->error('Validation failed', 422, $validator->errors());
-            }
-
-            // Delete old image if exists
-            if ($user->profile_image_url) {
-                $oldPath = $user->profile_image_url;
-                
-                if (Storage::disk('public')->exists($oldPath)) {
-                    Storage::disk('public')->delete($oldPath);
-                    Log::info('Old profile image deleted', [
-                        'user_id' => $user->id,
-                        'old_path' => $oldPath,
-                    ]);
-                }
             }
 
             // Handle base64 image
             $base64Image = $request->input('image');
             
-            // Remove data URI scheme if present
+            // Extract mime type and clean base64 data
+            $mimeType = 'image/jpeg'; // default
             if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
+                $mimeType = 'image/' . $matches[1];
                 $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
             }
             
-            // Decode base64
-            $imageData = base64_decode($base64Image);
+            Log::info('Image data extracted', [
+                'mime_type' => $mimeType,
+                'data_length' => strlen($base64Image),
+            ]);
             
-            // Generate filename
-            $filename = time() . '_' . $user->id . '.jpg';
-            $path = 'profile-images/' . $filename;
-            
-            // Store image
-            Storage::disk('public')->put($path, $imageData);
-
-            // Update user's profile_image_url
-            $user->update([
-                'profile_image_url' => $path,
+            // Store base64 image data directly in database
+            $updated = $user->update([
+                'profile_image_data' => $base64Image,
+                'profile_image_mime_type' => $mimeType,
+                'profile_image_url' => null, // Clear old filesystem path
             ]);
 
-            // Generate full URL with domain
-            $imageUrl = url(Storage::url($path));
+            if (!$updated) {
+                Log::error('Failed to update user with image data', [
+                    'user_id' => $user->id,
+                ]);
+                return $this->error('Failed to save image', 500);
+            }
 
-            Log::info('Provider profile image uploaded', [
+            // Generate data URL for immediate display
+            $imageUrl = "data:{$mimeType};base64,{$base64Image}";
+
+            Log::info('Provider profile image uploaded to database', [
                 'user_id' => $user->id,
-                'path' => $path,
-                'url' => $imageUrl,
+                'mime_type' => $mimeType,
+                'data_size' => strlen($base64Image),
             ]);
 
             return $this->success([
                 'image_url' => $imageUrl,
                 'url' => $imageUrl,
-                'path' => $path,
             ], 'Profile image uploaded successfully');
 
         } catch (\Exception $e) {
             Log::error('Failed to upload provider profile image', [
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
-            return $this->error('Failed to upload profile image. Please try again.', 500);
+            return $this->error('Failed to upload profile image: ' . $e->getMessage(), 500);
         }
     }
 
@@ -584,5 +592,117 @@ class ProviderController extends BaseController
         }
 
         return $metadata;
+    }
+
+    /**
+     * Generate full URL for profile image
+     *
+     * @param string|null $imageUrl
+     * @return string|null
+     */
+    private function generateProfileImageUrl(?string $imageUrl): ?string
+    {
+        if (!$imageUrl) {
+            return null;
+        }
+
+        // If it's already a full URL, use it as-is
+        if (str_starts_with($imageUrl, 'http://') || str_starts_with($imageUrl, 'https://')) {
+            return $imageUrl;
+        }
+
+        // Otherwise, generate full URL from storage path
+        return url(Storage::url($imageUrl));
+    }
+
+    /**
+     * Get profile image URL from database or filesystem
+     *
+     * @param \App\Models\User $user
+     * @return string|null
+     */
+    private function getProfileImageUrl($user): ?string
+    {
+        // Priority 1: Database-stored image data
+        if ($user->profile_image_data) {
+            $mimeType = $user->profile_image_mime_type ?? 'image/jpeg';
+            return "data:{$mimeType};base64,{$user->profile_image_data}";
+        }
+        
+        // Priority 2: Filesystem-based image (legacy)
+        if ($user->profile_image_url) {
+            return $this->generateProfileImageUrl($user->profile_image_url);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Process certifications to remove base64 data (to avoid URI too long errors)
+     *
+     * @param array|null $metadata
+     * @return array|null
+     */
+    private function processCertificationUrls(?array $metadata): ?array
+    {
+        if (!$metadata || !isset($metadata['certifications'])) {
+            return $metadata;
+        }
+
+        $certifications = $metadata['certifications'];
+        foreach ($certifications as &$cert) {
+            // Remove base64 data from response to avoid URI too long errors
+            // Frontend will fetch certificate images via separate endpoint
+            unset($cert['document_data']);
+            unset($cert['document_url']);
+        }
+        $metadata['certifications'] = $certifications;
+
+        return $metadata;
+    }
+
+    /**
+     * Get a specific certification document by ID
+     * GET /api/v1/provider/certifications/{id}
+     */
+    public function getCertification(string $id): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return $this->error('User not authenticated', 401);
+            }
+
+            $metadata = $user->metadata ?? [];
+            $certifications = $metadata['certifications'] ?? [];
+
+            // Find certification by ID
+            $cert = collect($certifications)->firstWhere('id', $id);
+
+            if (!$cert) {
+                return $this->error('Certification not found', 404);
+            }
+
+            // Return certificate with base64 data URL
+            if (isset($cert['document_data']) && isset($cert['mime_type'])) {
+                $cert['document_url'] = "data:{$cert['mime_type']};base64,{$cert['document_data']}";
+            }
+
+            Log::info('Certification retrieved', [
+                'user_id' => $user->id,
+                'certification_id' => $id,
+            ]);
+
+            return $this->success($cert, 'Certification retrieved successfully');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get certification', [
+                'exception' => $e->getMessage(),
+                'certification_id' => $id,
+            ]);
+
+            return $this->error('Failed to retrieve certification. Please try again.', 500);
+        }
     }
 }

@@ -378,6 +378,36 @@ class JwtAuthService {
     return !isExpired;
   }
 
+  /// Refresh user data from backend
+  /// 
+  /// Fetches fresh user data from /v1/auth/jwt/me endpoint
+  /// and updates local storage. Useful after profile updates.
+  /// 
+  /// Throws [Exception] if fetch fails or user is not authenticated
+  Future<void> refreshUserData() async {
+    try {
+      final response = await _apiClient.get('/v1/auth/jwt/me');
+
+      if (response.data['success'] != true) {
+        throw Exception('Failed to fetch user data');
+      }
+
+      final userData = response.data['data'];
+      
+      // Update stored user data
+      await TokenStorage.saveUserData(jsonEncode(userData));
+      
+      // Notify auth state changed
+      await _notifyAuthStateChanged();
+    } catch (e) {
+      if (e is DioException) {
+        final message = e.response?.data['message'] ?? 'Failed to fetch user data';
+        throw Exception(message);
+      }
+      rethrow;
+    }
+  }
+
   /// Upgrade customer account to service provider
   /// 
   /// Allows existing customers to become service providers.

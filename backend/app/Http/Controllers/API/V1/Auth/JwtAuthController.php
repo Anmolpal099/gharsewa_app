@@ -137,10 +137,12 @@ class JwtAuthController extends BaseController
      */
     public function login(Request $request)
     {
-        // Rate limiting
+        // Rate limiting (increased for development)
         $key = 'login:' . $request->ip();
+        $maxAttempts = env('LOGIN_MAX_ATTEMPTS', 100); // Default 100 for development
+        $decayMinutes = env('LOGIN_DECAY_MINUTES', 1); // Default 1 minute
         
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
             $seconds = RateLimiter::availableIn($key);
             return $this->error(
                 "Too many login attempts. Please try again in {$seconds} seconds.",
@@ -160,7 +162,7 @@ class JwtAuthController extends BaseController
         $credentials = $request->only('email', 'password');
 
         if (!$token = auth()->attempt($credentials)) {
-            RateLimiter::hit($key, 900); // 15 minutes
+            RateLimiter::hit($key, $decayMinutes * 60); // Convert minutes to seconds
             return $this->error('Invalid credentials', 401);
         }
 
@@ -258,6 +260,9 @@ class JwtAuthController extends BaseController
     {
         $user = auth()->user();
 
+        // Get profile image URL (from database or filesystem)
+        $profileImageUrl = $this->getProfileImageUrl($user);
+
         return $this->success([
             'id' => $user->id,
             'name' => $user->name,
@@ -265,11 +270,38 @@ class JwtAuthController extends BaseController
             'role' => $user->getPrimaryRole(),
             'roles' => $user->roles,
             'phone_number' => $user->phone_number,
-            'profile_image_url' => $user->profile_image_url,
+            'profile_image_url' => $profileImageUrl,
             'is_active' => $user->is_active,
             'email_verified_at' => $user->email_verified_at,
             'last_login_at' => $user->last_login_at,
         ], 'User details retrieved successfully');
+    }
+
+    /**
+     * Get profile image URL from database or filesystem
+     *
+     * @param \App\Models\User $user
+     * @return string|null
+     */
+    private function getProfileImageUrl($user): ?string
+    {
+        // Priority 1: Database-stored image data
+        if ($user->profile_image_data) {
+            $mimeType = $user->profile_image_mime_type ?? 'image/jpeg';
+            return "data:{$mimeType};base64,{$user->profile_image_data}";
+        }
+        
+        // Priority 2: Filesystem-based image (legacy)
+        if ($user->profile_image_url) {
+            // If it's already a full URL, use it as-is
+            if (str_starts_with($user->profile_image_url, 'http://') || str_starts_with($user->profile_image_url, 'https://')) {
+                return $user->profile_image_url;
+            }
+            // Otherwise, generate full URL from storage path
+            return url(\Illuminate\Support\Facades\Storage::url($user->profile_image_url));
+        }
+        
+        return null;
     }
 
     /**

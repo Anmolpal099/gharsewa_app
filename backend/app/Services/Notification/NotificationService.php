@@ -3,8 +3,10 @@
 namespace App\Services\Notification;
 
 use App\Models\User;
+use App\Models\Notification;
 use App\Models\NotificationSchedule;
 use App\Services\AI\SmartNotificationService;
+use App\Events\NotificationCreated;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Exception;
@@ -96,11 +98,22 @@ class NotificationService
     public function sendNotification(User $user, string $notificationType, array $data): bool
     {
         try {
-            // Placeholder for actual notification sending logic
-            // This would integrate with Firebase, email, SMS, etc.
+            // Create notification record in database
+            $notification = Notification::create([
+                'user_id' => $user->id,
+                'type' => $notificationType,
+                'title' => $data['title'] ?? 'Notification',
+                'body' => $data['message'] ?? $data['body'] ?? '',
+                'data' => $data['data'] ?? null,
+                'is_read' => false,
+            ]);
+
+            // Dispatch NotificationCreated event for real-time broadcasting
+            event(new NotificationCreated($notification));
             
             Log::info('Notification sent', [
                 'user_id' => $user->id,
+                'notification_id' => $notification->id,
                 'notification_type' => $notificationType,
                 'sent_at' => now()->toDateTimeString()
             ]);

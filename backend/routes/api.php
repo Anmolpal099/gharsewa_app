@@ -19,6 +19,7 @@ use App\Http\Controllers\API\V1\AI\AnalyticsController;
 use App\Http\Controllers\API\V1\AI\AIHealthController;
 use App\Http\Controllers\API\V1\AI\NotificationController as AINotificationController;
 use App\Http\Controllers\API\V1\Notification\NotificationController;
+use App\Http\Controllers\WebSocketHealthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,9 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('health', fn () => response()->json(['status' => 'ok', 'timestamp' => now()]));
+    
+    // ─── WebSocket health check ─────────────────────────────────
+    Route::get('websocket/health', [WebSocketHealthController::class, 'health']);
 
     // ─── Public service browsing ────────────────────────────────
     Route::prefix('services')->group(function () {
@@ -117,6 +121,7 @@ Route::prefix('v1')->group(function () {
             Route::get('earnings', [ProviderController::class, 'getEarnings']);
             Route::get('metrics', [ProviderController::class, 'getMetrics']);
             Route::post('certifications/upload', [ProviderController::class, 'uploadCertification']);
+            Route::get('certifications/{id}', [ProviderController::class, 'getCertification']);
 
             Route::get('analytics', [ProviderController::class, 'analytics']);
             Route::get('bookings', [ProviderBookingController::class, 'index']);

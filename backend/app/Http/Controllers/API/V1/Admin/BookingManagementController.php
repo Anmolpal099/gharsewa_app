@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\V1\Admin;
 
 use App\Http\Controllers\API\V1\BaseController;
 use App\Models\Booking;
+use App\Events\BookingStatusChanged;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -91,10 +92,16 @@ class BookingManagementController extends BaseController
             return $this->error('Booking not found', 404);
         }
 
+        // Store old status for event
+        $oldStatus = $booking->status;
+
         $booking->update([
             'status' => 'cancelled',
             'cancellation_reason' => $request->reason,
         ]);
+
+        // Dispatch BookingStatusChanged event
+        event(new BookingStatusChanged($booking, $oldStatus, 'cancelled'));
 
         return $this->success(null, 'Booking cancelled successfully');
     }

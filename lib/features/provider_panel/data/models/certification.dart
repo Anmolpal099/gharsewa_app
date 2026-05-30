@@ -4,7 +4,7 @@ library;
 class Certification {
   final String id;
   final String name;
-  final String documentUrl;
+  final String? documentUrl; // Optional - fetched separately to avoid URI too long
   final String fileType; // PDF, PNG, JPG
   final bool isVerified;
   final DateTime uploadedAt;
@@ -13,7 +13,7 @@ class Certification {
   const Certification({
     required this.id,
     required this.name,
-    required this.documentUrl,
+    this.documentUrl,
     required this.fileType,
     required this.isVerified,
     required this.uploadedAt,
@@ -25,7 +25,7 @@ class Certification {
     return Certification(
       id: json['id'] as String,
       name: json['name'] as String,
-      documentUrl: json['document_url'] as String,
+      documentUrl: json['document_url'] as String?,
       fileType: json['file_type'] as String,
       isVerified: json['is_verified'] as bool? ?? false,
       uploadedAt: json['uploaded_at'] != null
@@ -42,7 +42,7 @@ class Certification {
     return {
       'id': id,
       'name': name,
-      'document_url': documentUrl,
+      if (documentUrl != null) 'document_url': documentUrl,
       'file_type': fileType,
       'is_verified': isVerified,
       'uploaded_at': uploadedAt.toIso8601String(),

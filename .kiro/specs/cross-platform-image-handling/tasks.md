@@ -48,7 +48,7 @@ This implementation plan converts the cross-platform image handling design into 
     - Import required packages: `dart:io`, `package:flutter/material.dart`, `../models/platform_image.dart`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.2, 12.2_
 
-- [ ] 2. Checkpoint - Verify core infrastructure
+- [~] 2. Checkpoint - Verify core infrastructure
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 3. Update AI Visual Assistant to use platform-aware image handling
@@ -102,7 +102,7 @@ This implementation plan converts the cross-platform image handling design into 
     - Import `package:gharsewa/core/services/image_service.dart` and `package:gharsewa/core/models/platform_image.dart`
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 6.5, 11.1, 11.2, 11.3_
 
-- [ ] 4. Checkpoint - Verify AI Visual Assistant integration
+- [~] 4. Checkpoint - Verify AI Visual Assistant integration
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 5. Update customer profile management to use platform-aware image handling
@@ -147,7 +147,7 @@ This implementation plan converts the cross-platform image handling design into 
     - _Requirements: 5.1, 5.2, 5.3, 8.4, 9.5, 11.1, 11.2, 11.3_
 
 - [ ] 7. Update certificate upload functionality to use platform-aware image handling
-  - [ ] 7.1 Update certificate upload UI to use ImageService
+  - [x] 7.1 Update certificate upload UI to use ImageService
     - Locate certificate upload screen/widget in provider panel
     - Add `ImageService` instance
     - Update certificate image selection to use `ImageService.selectImage()`
@@ -157,59 +157,60 @@ This implementation plan converts the cross-platform image handling design into 
     - Import `package:gharsewa/core/services/image_service.dart`, `package:gharsewa/core/models/platform_image.dart`, and `package:gharsewa/core/widgets/image_display_widget.dart`
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.6, 12.1, 12.2_
 
-  - [ ] 7.2 Verify certificate upload service integration
+  - [x] 7.2 Verify certificate upload service integration
     - Ensure `ProviderUploadService` correctly handles certificate uploads with `PlatformImage`
     - Verify base64 conversion works correctly for certificates
     - Test error handling when certificate upload fails
     - _Requirements: 9.5, 10.3, 11.1, 11.2_
+    - **VERIFIED**: Backend tests passed, certificate upload working with base64 conversion, error handling implemented
 
-- [ ] 8. Checkpoint - Verify all feature integrations
+- [~] 8. Checkpoint - Verify all feature integrations
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Add error handling and user feedback improvements
-  - [ ] 9.1 Implement user-friendly error messages
+  - [~] 9.1 Implement user-friendly error messages
     - Review all error messages in `ImageService` and ensure they are user-friendly
     - Replace platform-specific error messages with generic messages
     - Add logging for platform-specific errors (for debugging)
     - Ensure no "Unsupported operation: _Namespace" errors are shown to users
     - _Requirements: 10.1, 10.2, 10.3, 10.5_
 
-  - [ ] 9.2 Add loading indicators for image operations
+  - [~] 9.2 Add loading indicators for image operations
     - Ensure `ImageDisplayWidget` shows loading indicator during image load
     - Add loading indicators in screens during image selection
     - Add loading indicators during image upload
     - Ensure loading indicators are consistent across platforms
     - _Requirements: 12.3, 12.4_
 
-  - [ ] 9.3 Implement error recovery mechanisms
+  - [~] 9.3 Implement error recovery mechanisms
     - Add retry functionality for failed image uploads
     - Provide clear error messages with actionable guidance
     - Ensure users can recover from errors without losing data
     - _Requirements: 10.1, 10.2, 10.3_
 
 - [ ] 10. Final integration and verification
-  - [ ] 10.1 Verify backward compatibility with backend APIs
+  - [~] 10.1 Verify backward compatibility with backend APIs
     - Test that base64-encoded images match expected format
     - Verify existing API endpoints work without modification
     - Test request/response format for all image upload endpoints
     - Verify image URLs returned by backend display correctly
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 10.2 Verify UI/UX consistency across platforms
+  - [~] 10.2 Verify UI/UX consistency across platforms
     - Test image selection flow on web and desktop
     - Verify image display sizing and aspect ratios are consistent
     - Ensure loading indicators are consistent
     - Verify existing UI design and layout are maintained
     - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
-  - [ ] 10.3 Final cross-platform testing
+  - [~] 10.3 Final cross-platform testing
     - Test all image operations on web (Chrome)
     - Test all image operations on desktop (Windows)
     - Verify no platform-specific errors occur
     - Test with various image formats and sizes
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 4.1, 4.2, 6.6, 7.5, 8.5, 9.6, 10.5_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [~] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
