@@ -14,6 +14,7 @@ class BookingModel {
   final String? serviceCategory;
   final List<String> serviceTags;
   final String? customerName;
+  final String? aiConsultationId; // Link to AI consultation if booking originated from one
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -31,6 +32,7 @@ class BookingModel {
     this.serviceCategory,
     this.serviceTags = const [],
     this.customerName,
+    this.aiConsultationId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -71,6 +73,7 @@ class BookingModel {
         json['service_tags'] ?? serviceMap?['tags'],
       ),
       customerName: json['customer_name'] as String? ?? customerMap?['name'] as String?,
+      aiConsultationId: json['ai_consultation_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -97,6 +100,7 @@ class BookingModel {
         'service_category': serviceCategory,
         'service_tags': serviceTags,
         'customer_name': customerName,
+        'ai_consultation_id': aiConsultationId,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -105,4 +109,5 @@ class BookingModel {
   bool get isConfirmed => status == BookingStatus.confirmed;
   bool get isCompleted => status == BookingStatus.completed;
   bool get isCancelled => status == BookingStatus.cancelled;
+  bool get hasAIConsultation => aiConsultationId != null && aiConsultationId!.isNotEmpty;
 }

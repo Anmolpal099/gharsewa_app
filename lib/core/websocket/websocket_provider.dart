@@ -236,6 +236,13 @@ class WebSocketConnection extends StateNotifier<ConnectionState> {
     return _manager!.stateStream;
   }
 
+  /// Get the number of reconnection attempts
+  /// 
+  /// **Requirement 13.4**: Display reconnection attempt count
+  int get reconnectAttempts {
+    return _manager?.reconnectAttempts ?? 0;
+  }
+
   @override
   void dispose() {
     _logger.i('Disposing WebSocket connection provider');

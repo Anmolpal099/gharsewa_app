@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/ai_assistant_home_screen.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/state/ai_consultation_providers.dart';
+import 'package:gharsewa/data/models/ai_consultation_models.dart';
+import 'package:gharsewa/services/api/ai_consultation_api_service.dart';
 
 void main() {
   group('AIAssistantHomeScreen Widget Tests', () {
@@ -90,7 +92,7 @@ void main() {
         ProviderScope(
           overrides: [
             consultationHistoryProvider.overrideWith(
-              (ref) => ConsultationHistoryNotifier()
+              (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const ConsultationHistoryState(
                   isLoading: true,
                   consultations: [],
@@ -115,7 +117,7 @@ void main() {
         ProviderScope(
           overrides: [
             consultationHistoryProvider.overrideWith(
-              (ref) => ConsultationHistoryNotifier()
+              (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const ConsultationHistoryState(
                   isLoading: false,
                   consultations: [],
@@ -145,7 +147,7 @@ void main() {
         ProviderScope(
           overrides: [
             consultationHistoryProvider.overrideWith(
-              (ref) => ConsultationHistoryNotifier()
+              (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const ConsultationHistoryState(
                   isLoading: false,
                   consultations: [],
@@ -245,20 +247,23 @@ void main() {
         ProviderScope(
           overrides: [
             consultationHistoryProvider.overrideWith(
-              (ref) => ConsultationHistoryNotifier()
+              (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = ConsultationHistoryState(
                   isLoading: false,
                   consultations: [
                     AIConsultationModel(
                       id: '1',
+                      customerId: 'customer-1',
+                      imagePath: '/path/to/image.jpg',
                       imageUrl: 'https://example.com/image.jpg',
                       markers: const [],
                       diagnosis: 'Test diagnosis',
                       recommendedServiceType: 'Plumbing',
-                      costMin: 1000,
-                      costMax: 2000,
+                      estimatedCostMin: 1000,
+                      estimatedCostMax: 2000,
                       recommendedProviders: const [],
                       createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   ],
                 ),
@@ -282,20 +287,23 @@ void main() {
         ProviderScope(
           overrides: [
             consultationHistoryProvider.overrideWith(
-              (ref) => ConsultationHistoryNotifier()
+              (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = ConsultationHistoryState(
                   isLoading: false,
                   consultations: [
                     AIConsultationModel(
                       id: '1',
+                      customerId: 'customer-1',
+                      imagePath: '/path/to/image.jpg',
                       imageUrl: null,
                       markers: const [],
                       diagnosis: 'Test diagnosis',
                       recommendedServiceType: 'Plumbing',
-                      costMin: 1000,
-                      costMax: 2000,
+                      estimatedCostMin: 1000,
+                      estimatedCostMax: 2000,
                       recommendedProviders: const [],
                       createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     ),
                   ],
                 ),

@@ -251,84 +251,94 @@ void main() {
       test('should validate cost range', () {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
-        expect(consultation.costMin, lessThan(consultation.costMax));
-        expect(consultation.costMin, greaterThanOrEqualTo(0));
-        expect(consultation.costMax, greaterThan(0));
+        expect(consultation.estimatedCostMin, lessThan(consultation.estimatedCostMax));
+        expect(consultation.estimatedCostMin, greaterThanOrEqualTo(0));
+        expect(consultation.estimatedCostMax, greaterThan(0));
       });
 
       test('should validate minimum cost estimate', () {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 500.0,
-          costMax: 1000.0,
+          estimatedCostMin: 500.0,
+          estimatedCostMax: 1000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         // Minimum cost should be at least NPR 500 per requirements
-        expect(consultation.costMin, greaterThanOrEqualTo(500));
+        expect(consultation.estimatedCostMin, greaterThanOrEqualTo(500));
       });
 
       test('should validate maximum cost estimate', () {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 50000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 50000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         // Maximum cost should not exceed NPR 50000 per requirements
-        expect(consultation.costMax, lessThanOrEqualTo(50000));
+        expect(consultation.estimatedCostMax, lessThanOrEqualTo(50000));
       });
 
       test('should validate cost range ratio', () {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         // Maximum should be at least 1.5x minimum per requirements
-        final ratio = consultation.costMax / consultation.costMin;
+        final ratio = consultation.estimatedCostMax / consultation.estimatedCostMin;
         expect(ratio, greaterThanOrEqualTo(1.5));
       });
 
       test('should validate diagnosis length', () {
         final shortDiagnosis = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Short diagnosis text',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         // Diagnosis should be between 50-500 characters per requirements
@@ -337,14 +347,16 @@ void main() {
         final longDiagnosis = 'A' * 600;
         final consultationWithLongDiagnosis = AIConsultationModel(
           id: '2',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: longDiagnosis,
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         expect(consultationWithLongDiagnosis.diagnosis.length, lessThanOrEqualTo(600));

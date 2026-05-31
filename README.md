@@ -30,6 +30,14 @@ Gharsewa is a comprehensive home services marketplace platform that connects cus
 - Push notifications
 - Real-time updates
 
+### ⚡ Real-Time WebSocket Communication
+- **Laravel Reverb**: WebSocket server for real-time event broadcasting
+- **Instant Updates**: Booking status changes, notifications, presence tracking
+- **JWT Authentication**: Secure WebSocket connections
+- **Graceful Degradation**: HTTP polling fallback when WebSocket fails
+- **Presence Tracking**: Online/offline status for users
+- **Cross-Platform**: Works on web, desktop, and mobile
+
 ## Technology Stack
 
 ### Backend
@@ -40,6 +48,7 @@ Gharsewa is a comprehensive home services marketplace platform that connects cus
 - **Storage**: Laravel Storage (local/S3)
 - **Cache**: Redis
 - **Queue**: Redis
+- **WebSocket**: Laravel Reverb
 
 ### Frontend
 - **Framework**: Flutter 3.x
@@ -92,6 +101,43 @@ php artisan db:seed
 docker exec gharsewa_ollama ollama pull qwen3-vl:2b
 ```
 
+### WebSocket Setup
+
+The WebSocket functionality is automatically configured with Docker Compose. To verify it's running:
+
+```bash
+# Check WebSocket service status
+docker-compose ps websocket
+
+# View WebSocket logs
+docker-compose logs -f websocket
+
+# Test WebSocket health endpoint
+curl http://localhost:8000/api/websocket/health
+```
+
+**Environment Variables** (in `backend/.env`):
+
+```env
+# Reverb Configuration
+REVERB_APP_ID=your-app-id
+REVERB_APP_KEY=your-app-key
+REVERB_APP_SECRET=your-app-secret
+REVERB_HOST=0.0.0.0
+REVERB_PORT=6001
+REVERB_SCHEME=http
+```
+
+**Flutter Environment Variables** (in `lib/core/config/env_config.dart` or via build flags):
+
+```dart
+// WebSocket URL
+WS_URL=ws://localhost:6001/app/your-app-key
+
+// Secure WebSocket (for production)
+USE_SECURE_WEBSOCKET=false
+```
+
 ### Flutter Setup
 
 ```bash
@@ -114,6 +160,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[Flutter Integration Guide](docs/AI_VISUAL_ASSISTANT_FLUTTER_GUIDE.md)**: Developer guide for Flutter implementation
 - **[Deployment Guide](docs/AI_VISUAL_ASSISTANT_DEPLOYMENT_GUIDE.md)**: Production deployment instructions
 - **[Troubleshooting Guide](docs/AI_VISUAL_ASSISTANT_TROUBLESHOOTING_GUIDE.md)**: Common issues and solutions
+- **[WebSocket Testing Guide](WEBSOCKET_TESTING_GUIDE.md)**: Complete WebSocket integration testing instructions
 
 ### Backend Documentation
 - **[API Reference](backend/AI_VISUAL_ASSISTANT_API_REFERENCE.md)**: Complete API documentation
@@ -227,6 +274,15 @@ See [API Reference](backend/AI_VISUAL_ASSISTANT_API_REFERENCE.md) for complete d
 - ✅ Widget Tests (103 tests)
 - ✅ Integration Tests (19 tests, 16 passing)
 - ✅ Documentation (Complete)
+- ✅ WebSocket Real-Time Communication (100% complete)
+  - Laravel Reverb server setup
+  - JWT authentication for WebSocket
+  - Event broadcasting (booking status, notifications)
+  - Channel authorization
+  - Presence tracking
+  - Connection status indicators
+  - Graceful degradation with HTTP polling
+  - Cross-platform support
 
 ## Performance
 

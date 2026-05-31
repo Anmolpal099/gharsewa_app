@@ -5,6 +5,7 @@ import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/ai
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/analysis_results_screen.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/state/ai_consultation_providers.dart';
 import 'package:gharsewa/data/models/ai_consultation_models.dart';
+import 'package:gharsewa/services/api/ai_consultation_api_service.dart';
 
 void main() {
   group('Error State Display Tests', () {
@@ -15,7 +16,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -43,7 +44,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -69,7 +70,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -96,7 +97,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -124,7 +125,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: false,
                     error: 'AI service unavailable',
@@ -151,7 +152,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: false,
                     error: 'Error occurred',
@@ -177,7 +178,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: false,
                     consultation: null,
@@ -202,7 +203,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: false,
                     error: 'Error',
@@ -234,7 +235,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -259,7 +260,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: false,
                     consultations: [],
@@ -286,21 +287,23 @@ void main() {
           (WidgetTester tester) async {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = CurrentConsultationState(
                     consultation: consultation,
                     isSubmitting: false,
@@ -330,7 +333,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: true,
                     consultations: [],
@@ -355,7 +358,7 @@ void main() {
           ProviderScope(
             overrides: [
               consultationHistoryProvider.overrideWith(
-                (ref) => ConsultationHistoryNotifier()
+                (ref) => ConsultationHistoryNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const ConsultationHistoryState(
                     isLoading: true,
                     consultations: [],
@@ -386,7 +389,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -412,7 +415,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -436,7 +439,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -461,7 +464,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -485,21 +488,23 @@ void main() {
           (WidgetTester tester) async {
         final consultation = AIConsultationModel(
           id: '1',
-          imageUrl: 'https://example.com/image.jpg',
+          customerId: 'customer-1',
+          imagePath: '/path/to/image.jpg',
           markers: const [],
           diagnosis: 'Test diagnosis',
           recommendedServiceType: 'Plumbing',
-          costMin: 2000.0,
-          costMax: 5000.0,
+          estimatedCostMin: 2000.0,
+          estimatedCostMax: 5000.0,
           recommendedProviders: const [],
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -521,7 +526,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = CurrentConsultationState(
                     consultation: consultation,
                     isSubmitting: false,
@@ -547,7 +552,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: true,
                   ),
@@ -569,7 +574,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentConsultationProvider.overrideWith(
-                (ref) => CurrentConsultationNotifier()
+                (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                   ..state = const CurrentConsultationState(
                     isSubmitting: false,
                     error: 'Analysis failed',

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/platform_image.dart';
 import '../../core/services/image_service.dart';
@@ -10,6 +9,21 @@ import 'api_exception.dart';
 final aiConsultationApiServiceProvider = Provider<AIConsultationApiService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return AIConsultationApiService(apiClient);
+});
+
+/// Provider for AI consultation analytics
+final aiConsultationAnalyticsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final apiService = ref.watch(aiConsultationApiServiceProvider);
+  return await apiService.getAIConsultationAnalytics(days: 30);
+});
+
+/// Provider for AI consultation statistics
+final aiConsultationStatisticsProvider = FutureProvider.family.autoDispose<Map<String, dynamic>, ({DateTime? startDate, DateTime? endDate})>((ref, params) async {
+  final apiService = ref.watch(aiConsultationApiServiceProvider);
+  return await apiService.getAIConsultationStatistics(
+    startDate: params.startDate,
+    endDate: params.endDate,
+  );
 });
 
 /// Service for AI Consultation API operations
@@ -208,6 +222,93 @@ class AIConsultationApiService {
     } catch (e) {
       throw ApiException(
         message: 'Failed to delete consultation: ${e.toString()}',
+        type: ApiExceptionType.unknown,
+        statusCode: null,
+      );
+    }
+  }
+
+  /// Gets AI consultation analytics for admin dashboard
+  /// 
+  /// Parameters:
+  /// - [days]: Number of days to analyze (default: 30)
+  /// 
+  /// Returns: AI consultation analytics data
+  /// 
+  /// Throws: [ApiException] on error
+  Future<Map<String, dynamic>> getAIConsultationAnalytics({int days = 30}) async {
+    try {
+      // Make API request
+      final response = await _apiClient.get(
+        '/v1/admin/ai/consultations/analytics',
+        params: {'days': days},
+      );
+
+      // Parse response
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      } else {
+        throw ApiException(
+          message: response.data['message'] ?? 'Failed to fetch AI consultation analytics',
+          type: ApiExceptionType.server,
+          statusCode: response.statusCode,
+        );
+      }
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        message: 'Failed to fetch AI consultation analytics: ${e.toString()}',
+        type: ApiExceptionType.unknown,
+        statusCode: null,
+      );
+    }
+  }
+
+  /// Gets AI consultation statistics for admin reports
+  /// 
+  /// Parameters:
+  /// - [startDate]: Start date for statistics
+  /// - [endDate]: End date for statistics
+  /// 
+  /// Returns: AI consultation statistics
+  /// 
+  /// Throws: [ApiException] on error
+  Future<Map<String, dynamic>> getAIConsultationStatistics({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      // Prepare query parameters
+      final params = <String, dynamic>{};
+      if (startDate != null) {
+        params['start_date'] = startDate.toIso8601String();
+      }
+      if (endDate != null) {
+        params['end_date'] = endDate.toIso8601String();
+      }
+
+      // Make API request
+      final response = await _apiClient.get(
+        '/v1/admin/ai/consultations/statistics',
+        params: params,
+      );
+
+      // Parse response
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      } else {
+        throw ApiException(
+          message: response.data['message'] ?? 'Failed to fetch AI consultation statistics',
+          type: ApiExceptionType.server,
+          statusCode: response.statusCode,
+        );
+      }
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        message: 'Failed to fetch AI consultation statistics: ${e.toString()}',
         type: ApiExceptionType.unknown,
         statusCode: null,
       );

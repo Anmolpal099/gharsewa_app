@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gharsewa/core/models/platform_image.dart';
 import 'package:gharsewa/data/models/ai_consultation_models.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/ai_assistant_home_screen.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/annotation_editor_screen.dart';
@@ -45,7 +45,7 @@ class MockAIConsultationApiService implements AIConsultationApiService {
 
   @override
   Future<AIConsultationModel> createConsultation({
-    required File imageFile,
+    required PlatformImage image,
     required List<DefectMarkerModel> markers,
   }) async {
     if (_mockException != null) throw _mockException!;
@@ -93,10 +93,52 @@ class MockAIConsultationApiService implements AIConsultationApiService {
     await Future.delayed(const Duration(milliseconds: 100));
     return _mockDeleteMessage!;
   }
+
+  @override
+  Future<Map<String, dynamic>> getAIConsultationAnalytics({int days = 30}) async {
+    if (_mockException != null) throw _mockException!;
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 100));
+    return {
+      'total_consultations': 100,
+      'successful_consultations': 85,
+      'failed_consultations': 15,
+      'avg_processing_time': 25.5,
+      'conversion_rate': 65.0,
+      'top_service_types': [
+        {'service_name': 'Plumbing Repair', 'count': 30, 'percentage': 30.0},
+        {'service_name': 'Electrical Work', 'count': 25, 'percentage': 25.0},
+      ],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAIConsultationStatistics({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    if (_mockException != null) throw _mockException!;
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 100));
+    return {
+      'total_consultations': 100,
+      'successful_consultations': 85,
+      'failed_consultations': 15,
+    };
+  }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  /// Helper function to create a test platform image
+  PlatformImage createTestPlatformImage() {
+    // Create a minimal valid JPEG file (1x1 pixel)
+    final bytes = base64Decode(
+      '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=',
+    );
+    return WebPlatformImage(bytes);
+  }
 
   group('AI Visual Assistant Integration Tests', () {
     late MockAIConsultationApiService mockApiService;
@@ -108,20 +150,6 @@ void main() {
     tearDown(() {
       mockApiService.reset();
     });
-
-    /// Helper function to create a test image file
-    File createTestImageFile() {
-      final tempDir = Directory.systemTemp;
-      final testImagePath = '${tempDir.path}/test_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final testFile = File(testImagePath);
-      
-      // Create a minimal valid JPEG file (1x1 pixel)
-      final bytes = base64Decode(
-        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=',
-      );
-      testFile.writeAsBytesSync(bytes);
-      return testFile;
-    }
 
     /// Helper function to create mock consultation response
     AIConsultationModel createMockConsultation() {
@@ -517,7 +545,7 @@ void main() {
     });
 
     test('Create consultation API call', () async {
-      final testImage = File('test.jpg');
+      final testImage = createTestPlatformImage();
       const markers = [
         DefectMarkerModel(
           id: 'marker-1',
@@ -544,7 +572,7 @@ void main() {
       mockApiService.setMockConsultation(mockConsultation);
 
       final result = await mockApiService.createConsultation(
-        imageFile: testImage,
+        image: testImage,
         markers: markers,
       );
 
@@ -584,7 +612,7 @@ void main() {
     });
 
     test('API error handling - network error', () async {
-      final testImage = File('test.jpg');
+      final testImage = createTestPlatformImage();
       const markers = [
         DefectMarkerModel(
           id: 'marker-1',
@@ -602,7 +630,7 @@ void main() {
 
       expect(
         () => mockApiService.createConsultation(
-          imageFile: testImage,
+          image: testImage,
           markers: markers,
         ),
         throwsA(isA<ApiException>()),

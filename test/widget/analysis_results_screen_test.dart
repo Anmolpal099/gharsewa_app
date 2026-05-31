@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/screens/analysis_results_screen.dart';
 import 'package:gharsewa/presentation/panels/customer/ai_consultation/state/ai_consultation_providers.dart';
 import 'package:gharsewa/data/models/ai_consultation_models.dart';
+import 'package:gharsewa/services/api/ai_consultation_api_service.dart';
 
 void main() {
   group('AnalysisResultsScreen Widget Tests', () {
@@ -12,7 +13,8 @@ void main() {
     setUp(() {
       testConsultation = AIConsultationModel(
         id: 'test-id-123',
-        imageUrl: 'https://example.com/image.jpg',
+        customerId: 'customer-1',
+        imagePath: '/path/to/image.jpg',
         markers: const [
           DefectMarkerModel(
             id: '1',
@@ -29,8 +31,8 @@ void main() {
         ],
         diagnosis: 'Plumbing leak with corrosion damage requiring immediate attention',
         recommendedServiceType: 'Plumbing Repair',
-        costMin: 2000.0,
-        costMax: 5000.0,
+        estimatedCostMin: 2000.0,
+        estimatedCostMax: 5000.0,
         recommendedProviders: [
           const ProviderRecommendationModel(
             id: 'provider-1',
@@ -48,6 +50,7 @@ void main() {
           ),
         ],
         createdAt: DateTime(2024, 1, 15, 10, 30),
+        updatedAt: DateTime(2024, 1, 15, 10, 30),
       );
     });
 
@@ -57,7 +60,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -83,7 +86,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const CurrentConsultationState(
                   isSubmitting: true,
                 ),
@@ -110,7 +113,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const CurrentConsultationState(
                   isSubmitting: false,
                   error: 'AI service unavailable',
@@ -138,7 +141,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = const CurrentConsultationState(
                   isSubmitting: false,
                   consultation: null,
@@ -164,7 +167,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -191,7 +194,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -218,7 +221,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -245,7 +248,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -278,7 +281,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: consultationWithoutProviders,
                   isSubmitting: false,
@@ -309,7 +312,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -336,7 +339,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -361,7 +364,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -388,7 +391,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -419,7 +422,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,
@@ -445,7 +448,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentConsultationProvider.overrideWith(
-              (ref) => CurrentConsultationNotifier()
+              (ref) => CurrentConsultationNotifier(ref.watch(aiConsultationApiServiceProvider))
                 ..state = CurrentConsultationState(
                   consultation: testConsultation,
                   isSubmitting: false,

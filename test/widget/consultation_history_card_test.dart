@@ -10,6 +10,8 @@ void main() {
     setUp(() {
       testConsultation = AIConsultationModel(
         id: 'test-id-123',
+        customerId: 'customer-1',
+        imagePath: '/path/to/image.jpg',
         imageUrl: 'https://example.com/image.jpg',
         markers: const [
           DefectMarkerModel(
@@ -21,10 +23,11 @@ void main() {
         ],
         diagnosis: 'Plumbing issue with water leak',
         recommendedServiceType: 'Plumbing Repair',
-        costMin: 2000.0,
-        costMax: 5000.0,
+        estimatedCostMin: 2000.0,
+        estimatedCostMax: 5000.0,
         recommendedProviders: const [],
         createdAt: DateTime(2024, 1, 15, 10, 30),
+        updatedAt: DateTime(2024, 1, 15, 10, 30),
       );
     });
 

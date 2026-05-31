@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/booking_model.dart';
+import '../../../../data/models/ai_consultation_models.dart';
 import '../../../../data/repositories/booking_repository.dart';
 import '../../../../features/provider_panel/business_logic/dashboard_controller.dart';
 import '../../../../features/provider_panel/business_logic/provider_bookings_providers.dart';
@@ -8,6 +9,119 @@ import '../../../../features/provider_panel/presentation/widgets/recommended_boo
 import '../../../../features/provider_panel/presentation/widgets/scheduling_assistant_banner.dart';
 import '../../../../services/ai/ai_api_service.dart';
 import '../../../../services/ai/models/ai_match_score.dart';
+import '../../../../services/api/ai_consultation_api_service.dart';
+
+/// Provider for AI consultation details by consultation ID
+final aiConsultationByIdProvider = FutureProvider.family<AIConsultationModel?, String>((ref, consultationId) async {
+  final apiService = ref.watch(aiConsultationApiServiceProvider);
+  try {
+    return await apiService.getConsultationById(consultationId);
+  } catch (e) {
+    return null;
+  }
+});
+
+/// Widget to display AI consultation details for a booking
+class AIConsultationDetailsWidget extends ConsumerWidget {
+  final String consultationId;
+
+  const AIConsultationDetailsWidget({super.key, required this.consultationId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final consultationAsync = ref.watch(aiConsultationByIdProvider(consultationId));
+
+    return consultationAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => const SizedBox.shrink(),
+      data: (consultation) {
+        if (consultation == null) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.purple[50]!, Colors.blue[50]!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.purple[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.psychology, color: Colors.purple[700], size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI Diagnosis',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[900],
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  consultation.diagnosis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.plumbing, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Service: ${consultation.serviceTypeDisplayName}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.attach_money, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Estimated Cost: ${consultation.costRangeFormatted}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+              if (consultation.markers.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Defect Markers: ${consultation.markerCount}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 class ProviderBookingsScreen extends ConsumerStatefulWidget {
   const ProviderBookingsScreen({super.key});
@@ -427,6 +541,9 @@ class _BookingRequestCard extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
             ),
             const Divider(height: 24),
+            // AI Consultation Details
+            if (booking.hasAIConsultation && booking.aiConsultationId != null)
+              AIConsultationDetailsWidget(consultationId: booking.aiConsultationId!),
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
@@ -540,61 +657,143 @@ class _BookingHistoryCard extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 1,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getStatusColor().withValues(alpha: 0.2),
-          child: Icon(_getStatusIcon(), color: _getStatusColor(), size: 20),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Booking #${booking.id.substring(0, 8)}',
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _getStatusColor().withValues(alpha: 0.2),
+              child: Icon(_getStatusIcon(), color: _getStatusColor(), size: 20),
             ),
-            // Match Score Badge for confirmed bookings
-            if (booking.isConfirmed)
-              matchScoreAsync.when(
-                data: (matchScore) => _MatchScoreBadge(
-                  matchScore: matchScore,
-                  compact: true,
-                  onTap: () => _showMatchScoreBreakdown(context, matchScore),
-                ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-          ],
-        ),
-        subtitle: Text(
-          '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} • NPR ${booking.totalPrice.toStringAsFixed(0)}',
-        ),
-        trailing: onComplete != null
-            ? FilledButton.icon(
-                onPressed: onComplete,
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('Complete'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              )
-            : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getStatusColor().withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _getStatusColor().withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  booking.status.name.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: _getStatusColor(),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Booking #${booking.id.substring(0, 8)}',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
+                // AI Consultation Indicator
+                if (booking.hasAIConsultation)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.purple[200]!),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.psychology, color: Colors.purple[700], size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'AI',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                // Match Score Badge for confirmed bookings
+                if (booking.isConfirmed)
+                  matchScoreAsync.when(
+                    data: (matchScore) => _MatchScoreBadge(
+                      matchScore: matchScore,
+                      compact: true,
+                      onTap: () => _showMatchScoreBreakdown(context, matchScore),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+              ],
+            ),
+            subtitle: Text(
+              '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year} • NPR ${booking.totalPrice.toStringAsFixed(0)}',
+            ),
+            trailing: onComplete != null
+                ? FilledButton.icon(
+                    onPressed: onComplete,
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Complete'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor().withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _getStatusColor().withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      booking.status.name.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: _getStatusColor(),
+                      ),
+                    ),
+                  ),
+            onTap: booking.hasAIConsultation && booking.aiConsultationId != null
+                ? () => _showAIConsultationDetails(context, booking.aiConsultationId!)
+                : null,
+          ),
+          // AI Consultation Details (expandable)
+          if (booking.hasAIConsultation && booking.aiConsultationId != null)
+            AIConsultationDetailsWidget(consultationId: booking.aiConsultationId!),
+        ],
+      ),
+    );
+  }
+
+  void _showAIConsultationDetails(BuildContext context, String consultationId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Text(
+                    'AI Consultation Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: AIConsultationDetailsWidget(consultationId: consultationId),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

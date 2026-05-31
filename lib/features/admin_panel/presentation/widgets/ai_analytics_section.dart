@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/ai/ai_api_service.dart';
 import '../../../../services/ai/models/ai_prediction.dart';
 import '../../../../services/ai/models/ai_trend.dart';
+import '../../../../services/api/ai_consultation_api_service.dart';
 
 /// Provider for AI predictions
 final aiPredictionsProvider = FutureProvider.autoDispose<AIPrediction>((ref) async {
@@ -31,6 +32,7 @@ class AIAnalyticsSection extends ConsumerWidget {
     final predictionsAsync = ref.watch(aiPredictionsProvider);
     final trendsAsync = ref.watch(aiTrendsProvider);
     final insightsAsync = ref.watch(aiInsightsProvider);
+    final consultationAnalyticsAsync = ref.watch(aiConsultationAnalyticsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,11 +52,31 @@ class AIAnalyticsSection extends ConsumerWidget {
                 ref.invalidate(aiPredictionsProvider);
                 ref.invalidate(aiTrendsProvider);
                 ref.invalidate(aiInsightsProvider);
+                ref.invalidate(aiConsultationAnalyticsProvider);
               },
               tooltip: 'Refresh Analytics',
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        
+        // AI Consultation Analytics Section
+        consultationAnalyticsAsync.when(
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+          error: (error, _) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Error loading consultation analytics: $error'),
+            ),
+          ),
+          data: (analytics) => AIConsultationAnalyticsWidget(analytics: analytics),
+        ),
+        
         const SizedBox(height: 16),
         
         // Predictions Section
@@ -112,6 +134,198 @@ class AIAnalyticsSection extends ConsumerWidget {
           data: (insights) => InsightsWidget(insights: insights),
         ),
       ],
+    );
+  }
+}
+
+/// Widget to display AI consultation analytics
+class AIConsultationAnalyticsWidget extends StatelessWidget {
+  final Map<String, dynamic> analytics;
+
+  const AIConsultationAnalyticsWidget({super.key, required this.analytics});
+
+  @override
+  Widget build(BuildContext context) {
+    final totalConsultations = analytics['total_consultations'] as int? ?? 0;
+    final successfulConsultations = analytics['successful_consultations'] as int? ?? 0;
+    final failedConsultations = analytics['failed_consultations'] as int? ?? 0;
+    final avgProcessingTime = analytics['avg_processing_time'] as double? ?? 0.0;
+    final topServiceTypes = analytics['top_service_types'] as List<dynamic>? ?? [];
+    final conversionRate = analytics['conversion_rate'] as double? ?? 0.0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.psychology, color: Colors.purple[700]),
+                const SizedBox(width: 8),
+                Text(
+                  'AI Consultation Analytics (Last 30 Days)',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Statistics Grid
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.5,
+              children: [
+                _buildStatCard(
+                  context,
+                  'Total Consultations',
+                  '$totalConsultations',
+                  Icons.analytics,
+                  Colors.blue,
+                ),
+                _buildStatCard(
+                  context,
+                  'Successful',
+                  '$successfulConsultations',
+                  Icons.check_circle,
+                  Colors.green,
+                ),
+                _buildStatCard(
+                  context,
+                  'Failed',
+                  '$failedConsultations',
+                  Icons.error,
+                  Colors.red,
+                ),
+                _buildStatCard(
+                  context,
+                  'Avg Processing Time',
+                  '${avgProcessingTime.toStringAsFixed(1)}s',
+                  Icons.timer,
+                  Colors.orange,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Conversion Rate
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.purple[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: Colors.purple[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Booking Conversion Rate',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${conversionRate.toStringAsFixed(1)}% of AI consultations resulted in bookings',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Top Service Types
+            if (topServiceTypes.isNotEmpty) ...[
+              Text(
+                'Top Service Types',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              ...topServiceTypes.take(5).map((service) {
+                final serviceMap = service as Map<String, dynamic>;
+                final serviceName = serviceMap['service_name'] as String? ?? 'Unknown';
+                final count = serviceMap['count'] as int? ?? 0;
+                final percentage = serviceMap['percentage'] as double? ?? 0.0;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(serviceName),
+                      ),
+                      Text(
+                        '$count (${percentage.toStringAsFixed(1)}%)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
