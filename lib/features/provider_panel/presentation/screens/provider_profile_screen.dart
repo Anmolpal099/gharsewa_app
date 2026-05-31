@@ -297,8 +297,8 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                                 leading: const Icon(Icons.verified_user),
                                 title: Text(c.name),
                                 subtitle: Text(c.isVerified ? 'Verified' : 'Pending'),
-                                onTap: c.documentUrl.isNotEmpty
-                                    ? () => _openCert(c.documentUrl)
+                                onTap: c.documentUrl?.isNotEmpty ?? false
+                                    ? () => _openCert(c.documentUrl!)
                                     : null,
                                 trailing: !c.isVerified
                                     ? IconButton(
