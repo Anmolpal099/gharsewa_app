@@ -14,25 +14,42 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create admin user if it doesn't exist
-        $adminEmail = 'admin@gharsewa.com';
-        
-        if (!User::where('email', $adminEmail)->exists()) {
-            User::create([
-                'name' => 'Admin User',
-                'email' => $adminEmail,
-                'password' => Hash::make('Admin123'),
+        $admins = [
+            [
+                'name' => 'Anmol Pal',
+                'email' => 'anmolpal156@gmail.com',
+                'password' => 'Anmol123@',
                 'role' => 'admin',
                 'roles' => ['admin'],
-                'is_active' => true,
-                'email_verified_at' => now(), // Admin is pre-verified
-            ]);
-            
-            $this->command->info('Admin user created successfully!');
-            $this->command->info('Email: ' . $adminEmail);
-            $this->command->info('Password: Admin123');
-        } else {
-            $this->command->info('Admin user already exists.');
+            ],
+            [
+                'name' => 'Admin User',
+                'email' => 'admin@gharsewa.com',
+                'password' => 'Admin123',
+                'role' => 'admin',
+                'roles' => ['admin'],
+            ],
+        ];
+
+        foreach ($admins as $adminData) {
+            if (!User::where('email', $adminData['email'])->exists()) {
+                User::create([
+                    'name' => $adminData['name'],
+                    'email' => $adminData['email'],
+                    'password' => Hash::make($adminData['password']),
+                    'role' => $adminData['role'],
+                    'roles' => $adminData['roles'],
+                    'is_active' => true,
+                    'email_verified_at' => now(), // Admin is pre-verified
+                ]);
+                
+                $this->command->info('✅ Admin created: ' . $adminData['email']);
+            } else {
+                $this->command->info('⚠️  Admin already exists: ' . $adminData['email']);
+            }
         }
+        
+        $this->command->info('');
+        $this->command->info('Admin accounts ready!');
     }
 }
