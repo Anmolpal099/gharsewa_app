@@ -78,6 +78,10 @@ class Base64Image implements ValidationRule
             return;
         }
 
+        // Extract dimensions (already available from getimagesizefromstring)
+        $width = $imageInfo[0];
+        $height = $imageInfo[1];
+
         // Check if it's a supported image format (JPEG, PNG, HEIC/HEIF)
         $allowedMimeTypes = [
             'image/jpeg',
@@ -89,6 +93,12 @@ class Base64Image implements ValidationRule
 
         if (!in_array($imageInfo['mime'], $allowedMimeTypes)) {
             $fail('The :attribute must be a JPEG, PNG, or HEIC image.');
+            return;
+        }
+
+        // Validate minimum dimensions (required by qwen3vl model: factor:32)
+        if ($width < 32 || $height < 32) {
+            $fail("The :attribute must be at least 32x32 pixels. Your image is {$width}x{$height} pixels.");
             return;
         }
     }
