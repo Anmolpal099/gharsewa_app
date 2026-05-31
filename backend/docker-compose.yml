@@ -18,12 +18,27 @@ services:
       - /var/www/node_modules
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
     environment:
-      - APP_ENV=local
-      - APP_KEY=
+      - APP_ENV=${APP_ENV:-local}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - APP_URL=${APP_URL:-http://localhost:8000}
       - DB_HOST=db
-      - DB_DATABASE=gharsewa
-      - DB_USERNAME=gharsewa_user
-      - DB_PASSWORD=gharsewa_password
+      - DB_DATABASE=${DB_DATABASE:-gharsewa}
+      - DB_USERNAME=${DB_USERNAME:-gharsewa_user}
+      - DB_PASSWORD=${DB_PASSWORD:-gharsewa_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://gharsewa_ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3-vl:2b}
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-60}
+      - OLLAMA_MAX_TOKENS=${OLLAMA_MAX_TOKENS:-2048}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.7}
+      - OLLAMA_TOP_P=${OLLAMA_TOP_P:-0.9}
+      - AI_MAX_RETRIES=${AI_MAX_RETRIES:-3}
+      - AI_RETRY_DELAY=${AI_RETRY_DELAY:-1000}
+      - AI_CACHE_TTL=${AI_CACHE_TTL:-3600}
+    env_file:
+      - .env
     networks:
       - gharsewa_network
     depends_on:
@@ -155,6 +170,7 @@ services:
 networks:
   gharsewa_network:
     driver: bridge
+    name: backend_gharsewa_network
 
 volumes:
   dbdata:

@@ -920,7 +920,7 @@ lib/
 **Description:** Implement framework for testing notification strategies.
 **Estimated Time:** 0.5 hours
 
-## Epic 10: Real-Time Features
+## Epic 10: 
 
 ### Task 10.1: Set Up WebSocket Server
 **Description:** Configure Laravel WebSockets for real-time communication.

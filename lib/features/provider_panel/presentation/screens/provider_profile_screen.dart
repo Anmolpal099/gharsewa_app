@@ -299,7 +299,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                                 subtitle: Text(c.isVerified ? 'Verified' : 'Pending'),
                                 onTap: c.documentUrl?.isNotEmpty ?? false
                                     ? () => _openCert(c.documentUrl!)
-                                    : null,
+                                    : () => _showPendingCertMessage(context),
                                 trailing: !c.isVerified
                                     ? IconButton(
                                         icon: const Icon(Icons.delete_outline),
@@ -509,6 +509,8 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
             result.image!,
             onProgress: (p) => setState(() => _uploadProgress = p),
           );
+      // Refresh profile data to get updated photo URL
+      await ref.read(profileManagerProvider.notifier).fetchProfile(forceRefresh: true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile photo updated')),
@@ -648,6 +650,25 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
     final uri = Uri.tryParse(resolved);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _showPendingCertMessage(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pending Verification'),
+        content: const Text(
+          'This certification is currently pending verification. '
+          'You will be able to view the document once it has been verified by our team.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

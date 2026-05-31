@@ -25,10 +25,15 @@ class CustomerProfileScreen extends ConsumerWidget {
                 child: CircleAvatar(
                   radius: 48,
                   backgroundColor: Colors.blue.shade100,
-                  child: Text(
-                    (user?.name ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 36, color: Colors.blue),
-                  ),
+                  backgroundImage: user?.profileImageUrl != null
+                      ? NetworkImage(user!.profileImageUrl!)
+                      : null,
+                  child: user?.profileImageUrl == null
+                      ? Text(
+                          (user?.name ?? 'U')[0].toUpperCase(),
+                          style: const TextStyle(fontSize: 36, color: Colors.blue),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(height: 16),

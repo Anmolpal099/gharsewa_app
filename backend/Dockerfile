@@ -40,6 +40,9 @@ RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
 # Copy application files
 COPY . .
 
+# Create storage symlink directory if it doesn't exist
+RUN mkdir -p public/storage
+
 # Create required directories and set permissions
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views \
     && chmod -R 775 bootstrap/cache storage

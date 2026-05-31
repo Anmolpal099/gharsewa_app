@@ -24,16 +24,47 @@ class AIService
 
     public function __construct()
     {
-        $this->ollamaHost = config('services.ollama.host', env('OLLAMA_HOST', 'http://localhost:11434'));
-        $this->model = config('services.ollama.model', env('OLLAMA_MODEL', 'qwen3-vl:2b'));
-        $this->timeout = (int) config('services.ollama.timeout', env('OLLAMA_TIMEOUT', 60));
-        $this->maxTokens = (int) config('services.ollama.max_tokens', env('OLLAMA_MAX_TOKENS', 2048));
-        $this->temperature = (float) config('services.ollama.temperature', env('OLLAMA_TEMPERATURE', 0.7));
-        $this->topP = (float) config('services.ollama.top_p', env('OLLAMA_TOP_P', 0.9));
-        $this->maxRetries = (int) config('services.ollama.max_retries', env('AI_MAX_RETRIES', 3));
-        $this->retryDelay = (int) config('services.ollama.retry_delay', env('AI_RETRY_DELAY', 1000));
+        // Use hardcoded fallbacks for Docker environment where env vars may not load properly
+        $this->ollamaHost = config('services.ollama.host') 
+            ?? env('OLLAMA_HOST') 
+            ?? 'http://gharsewa_ollama:11434';
+        
+        $this->model = config('services.ollama.model') 
+            ?? env('OLLAMA_MODEL') 
+            ?? 'qwen3-vl:2b';
+        
+        $this->timeout = (int) (config('services.ollama.timeout') 
+            ?? env('OLLAMA_TIMEOUT') 
+            ?? 120);
+        
+        $this->maxTokens = (int) (config('services.ollama.max_tokens') 
+            ?? env('OLLAMA_MAX_TOKENS') 
+            ?? 2048);
+        
+        $this->temperature = (float) (config('services.ollama.temperature') 
+            ?? env('OLLAMA_TEMPERATURE') 
+            ?? 0.7);
+        
+        $this->topP = (float) (config('services.ollama.top_p') 
+            ?? env('OLLAMA_TOP_P') 
+            ?? 0.9);
+        
+        $this->maxRetries = (int) (config('services.ollama.max_retries') 
+            ?? env('AI_MAX_RETRIES') 
+            ?? 3);
+        
+        $this->retryDelay = (int) (config('services.ollama.retry_delay') 
+            ?? env('AI_RETRY_DELAY') 
+            ?? 1000);
 
         $this->parser = new ResponseParser();
+        
+        // Log configuration for debugging
+        Log::debug('AIService initialized', [
+            'ollama_host' => $this->ollamaHost,
+            'model' => $this->model,
+            'timeout' => $this->timeout,
+        ]);
     }
 
     /**
