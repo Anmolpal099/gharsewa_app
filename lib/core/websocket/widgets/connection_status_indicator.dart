@@ -307,7 +307,7 @@ class ConnectionStatusIndicator extends ConsumerWidget {
             )
           else
             Icon(icon, size: 14, color: color),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             label,
             style: textStyle ??
@@ -352,7 +352,7 @@ class ConnectionStatusIndicator extends ConsumerWidget {
             )
           else
             Icon(icon, size: 20, color: color),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
